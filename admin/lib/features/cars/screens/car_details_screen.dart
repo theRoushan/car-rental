@@ -17,11 +17,12 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await context.read<ApiService>().put(
+      await context.read<ApiService>().put<Car>(
         '/api/cars/${car.id}',
         data: {
           'is_available': !car.isAvailable,
         },
+        fromJson: (json) => Car.fromJson(json),
       );
 
       if (mounted) {
@@ -67,7 +68,10 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await context.read<ApiService>().delete('/api/cars/${car.id}');
+      await context.read<ApiService>().delete<Car>(
+        '/api/cars/${car.id}',
+        fromJson: (json) => Car.fromJson(json),
+      );
       if (mounted) {
         Navigator.pop(context, true); // Refresh car list
       }

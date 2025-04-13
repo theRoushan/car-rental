@@ -1,16 +1,23 @@
 import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/models/api_exception.dart';
+import '../../../core/services/api_service.dart';
 import '../models/user.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SharedPreferences _prefs;
+  final ApiService _apiService;
   static const String _userKey = 'user';
+  static const String _tokenKey = 'token';
 
-  AuthBloc({required SharedPreferences prefs})
-      : _prefs = prefs,
+  AuthBloc({
+    required SharedPreferences prefs,
+    required ApiService apiService,
+  })  : _prefs = prefs,
+        _apiService = apiService,
         super(AuthInitial()) {
     on<CheckAuthStatus>(_onCheckAuthStatus);
     on<LoginRequested>(_onLoginRequested);
@@ -20,14 +27,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _onCheckAuthStatus(CheckAuthStatus event, Emitter<AuthState> emit) {
     final userJson = _prefs.getString(_userKey);
-    if (userJson != null) {
+    final token = _prefs.getString(_tokenKey);
+    
+    if (userJson != null && token != null) {
       try {
         final user = User.fromJson(json.decode(userJson));
         emit(Authenticated(user));
       } catch (e) {
+        _clearSession();
         emit(const AuthError('Failed to parse stored user data'));
       }
     } else {
+      _clearSession();
       emit(Unauthenticated());
     }
   }
@@ -38,23 +49,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      // TODO: Implement actual login API call
-      // This is a mock implementation
-      await Future.delayed(const Duration(seconds: 2));
-      
-      final user = User(
-        id: '1',
-        name: 'Admin User',
-        email: event.email,
-        role: 'admin',
-        createdAt: DateTime.now(),
-        lastLogin: DateTime.now(),
+      final response = await _apiService.post<User>(
+        '/auth/login',
+        data: {
+          'email': event.email,
+          'password': event.password,
+        },
+        fromJson: (json) => User.fromJson(json),
       );
 
-      await _prefs.setString(_userKey, json.encode(user.toJson()));
-      emit(Authenticated(user));
+      if (response.success && response.data != null) {
+        final token = response.data!.token;
+        await _prefs.setString(_tokenKey, token);
+        await _prefs.setString(_userKey, json.encode(response.data!.toJson()));
+        emit(Authenticated(response.data!));
+      } else {
+        emit(AuthError(response.message ?? 'Login failed'));
+      }
+    } on ApiException catch (e) {
+      emit(AuthError(e.message));
     } catch (e) {
-      emit(AuthError(e.toString()));
+      emit(const AuthError('An unexpected error occurred'));
     }
   }
 
@@ -64,23 +79,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      // TODO: Implement actual registration API call
-      // This is a mock implementation
-      await Future.delayed(const Duration(seconds: 2));
-      
-      final user = User(
-        id: '1',
-        name: event.name,
-        email: event.email,
-        role: 'admin',
-        createdAt: DateTime.now(),
-        lastLogin: DateTime.now(),
+      final response = await _apiService.post<User>(
+        '/auth/register',
+        data: {
+          'name': event.name,
+          'email': event.email,
+          'password': event.password,
+          'role': 'admin',
+        },
+        fromJson: (json) => User.fromJson(json),
       );
 
-      await _prefs.setString(_userKey, json.encode(user.toJson()));
-      emit(Authenticated(user));
+      if (response.success && response.data != null) {
+        final token = response.data!.token;
+        await _prefs.setString(_tokenKey, token);
+        await _prefs.setString(_userKey, json.encode(response.data!.toJson()));
+        emit(Authenticated(response.data!));
+      } else {
+        emit(AuthError(response.message ?? 'Registration failed'));
+      }
+    } on ApiException catch (e) {
+      emit(AuthError(e.message));
     } catch (e) {
-      emit(AuthError(e.toString()));
+      emit(const AuthError('An unexpected error occurred'));
     }
   }
 
@@ -90,10 +111,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      await _prefs.remove(_userKey);
+      await _clearSession();
       emit(Unauthenticated());
     } catch (e) {
-      emit(AuthError(e.toString()));
+      emit(const AuthError('Failed to logout'));
     }
+  }
+
+  Future<void> _clearSession() async {
+    await _prefs.remove(_userKey);
+    await _prefs.remove(_tokenKey);
   }
 } 

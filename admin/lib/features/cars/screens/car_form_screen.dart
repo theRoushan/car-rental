@@ -68,14 +68,16 @@ class _CarFormScreenState extends State<CarFormScreen> {
 
     try {
       if (_isEditMode) {
-        await context.read<ApiService>().put(
+        await context.read<ApiService>().put<Car>(
               '/api/cars/$_carId',
               data: data,
+              fromJson: (json) => Car.fromJson(json),
             );
       } else {
-        await context.read<ApiService>().post(
+        await context.read<ApiService>().post<Car>(
               '/api/cars',
               data: data,
+              fromJson: (json) => Car.fromJson(json),
             );
       }
 

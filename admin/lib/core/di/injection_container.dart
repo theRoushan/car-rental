@@ -1,6 +1,6 @@
-import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart' show SharedPreferences;
+import '../services/api_service.dart';
 import '../../features/auth/bloc/auth_bloc.dart';
 import '../../features/cars/bloc/car_bloc.dart';
 import '../../features/cars/repositories/car_repository.dart';
@@ -12,31 +12,25 @@ Future<void> init() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   getIt.registerLazySingleton(() => sharedPreferences);
 
-  // Dio
-  getIt.registerLazySingleton(() {
-    final dio = Dio(BaseOptions(
-      baseUrl: 'YOUR_API_BASE_URL', // Replace with your actual API base URL
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ));
-    return dio;
-  });
+  // Services
+  getIt.registerLazySingleton(
+    () => ApiService(getIt()),
+  );
 
   // Repositories
   getIt.registerLazySingleton(
     () => CarRepository(
-      dio: getIt(),
-      baseUrl: 'YOUR_API_BASE_URL', // Replace with your actual API base URL
+      dio: getIt<ApiService>().dio,
+      baseUrl: ApiService.baseUrl,
     ),
   );
 
   // Blocs
   getIt.registerFactory(
-    () => AuthBloc(prefs: getIt()),
+    () => AuthBloc(
+      prefs: getIt(),
+      apiService: getIt(),
+    ),
   );
 
   getIt.registerFactory(

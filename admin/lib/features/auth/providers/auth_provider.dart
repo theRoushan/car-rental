@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart' show SharedPreferences;
-import '../../../core/models/user.dart';
+import '../models/user.dart';
 import '../../../core/services/api_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -8,33 +8,44 @@ class AuthProvider extends ChangeNotifier {
   final SharedPreferences _prefs;
   User? _currentUser;
   bool _isLoading = false;
+  String? _error;
 
   AuthProvider(this._apiService, this._prefs);
 
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _currentUser != null;
+  String? get error => _error;
 
   Future<void> login(String email, String password) async {
     try {
       _isLoading = true;
+      _error = null;
       notifyListeners();
 
-      final response = await _apiService.post('/auth/login', data: {
-        'email': email,
-        'password': password,
-      });
+      final response = await _apiService.post<User>(
+        '/auth/login',
+        data: {
+          'email': email,
+          'password': password,
+        },
+        fromJson: (json) => User.fromJson(json),
+      );
 
-      final token = response.data['token'];
-      final userData = response.data['user'];
-
-      await _prefs.setString('token', token);
-      _currentUser = User.fromJson(userData);
+      if (response.success && response.data != null) {
+        final token = response.data!.token;
+        await _prefs.setString('token', token);
+        _currentUser = response.data;
+        _error = null;
+      } else {
+        _error = response.message ?? 'Login failed';
+      }
 
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+      _error = e.toString();
       notifyListeners();
       rethrow;
     }
@@ -43,24 +54,34 @@ class AuthProvider extends ChangeNotifier {
   Future<void> register(String name, String email, String password) async {
     try {
       _isLoading = true;
+      _error = null;
       notifyListeners();
 
-      final response = await _apiService.post('/auth/register', data: {
-        'name': name,
-        'email': email,
-        'password': password,
-      });
+      final response = await _apiService.post<User>(
+        '/auth/register',
+        data: {
+          'name': name,
+          'email': email,
+          'password': password,
+          'role': 'admin',
+        },
+        fromJson: (json) => User.fromJson(json),
+      );
 
-      final token = response.data['token'];
-      final userData = response.data['user'];
-
-      await _prefs.setString('token', token);
-      _currentUser = User.fromJson(userData);
+      if (response.success && response.data != null) {
+        final token = response.data!.token;
+        await _prefs.setString('token', token);
+        _currentUser = response.data;
+        _error = null;
+      } else {
+        _error = response.message ?? 'Registration failed';
+      }
 
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+      _error = e.toString();
       notifyListeners();
       rethrow;
     }
@@ -69,6 +90,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await _prefs.remove('token');
     _currentUser = null;
+    _error = null;
     notifyListeners();
   }
 
@@ -81,11 +103,29 @@ class AuthProvider extends ChangeNotifier {
     }
 
     try {
-      // TODO: Add endpoint to verify token and get user data
-      // final response = await _apiService.get('/auth/me');
-      // _currentUser = User.fromJson(response.data);
+      _isLoading = true;
+      notifyListeners();
+
+      final response = await _apiService.get<User>(
+        '/auth/me',
+        fromJson: (json) => User.fromJson(json),
+      );
+
+      if (response.success && response.data != null) {
+        _currentUser = response.data;
+        _error = null;
+      } else {
+        await logout();
+        _error = response.message ?? 'Session expired';
+      }
+
+      _isLoading = false;
+      notifyListeners();
     } catch (e) {
       await logout();
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
     }
   }
 } 

@@ -3,12 +3,15 @@ class User {
   final String name;
   final String email;
   final DateTime createdAt;
+  final String token;
 
   User({
     required this.id,
     required this.name,
     required this.email,
     required this.createdAt,
+    required this.token,
+
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -17,6 +20,7 @@ class User {
       name: json['name'],
       email: json['email'],
       createdAt: DateTime.parse(json['created_at']),
+      token: json['token'],
     );
   }
 
@@ -26,6 +30,7 @@ class User {
       'name': name,
       'email': email,
       'created_at': createdAt.toIso8601String(),
+      'token': token,
     };
   }
 
@@ -39,6 +44,7 @@ class User {
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
+      token: token ?? this.token,
       createdAt: createdAt ?? this.createdAt,
     );
   }

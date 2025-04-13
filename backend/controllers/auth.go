@@ -5,6 +5,7 @@ import (
 	"car-rental-backend/database"
 	"car-rental-backend/middlewares"
 	"car-rental-backend/models"
+	"car-rental-backend/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -23,17 +24,13 @@ type LoginRequest struct {
 func Register(c *fiber.Ctx) error {
 	var req RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid request body", []string{"Failed to parse request body"})
 	}
 
 	// Check if user already exists
 	var existingUser models.User
 	if result := database.DB.Where("email = ?", req.Email).First(&existingUser); result.Error == nil {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-			"error": "User with this email already exists",
-		})
+		return utils.ConflictResponse(c, "User with this email already exists")
 	}
 
 	user := models.User{
@@ -42,27 +39,22 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	if err := user.SetPassword(req.Password); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to process password",
-		})
+		return utils.ServerErrorResponse(c, "Failed to process password")
 	}
 
 	if result := database.DB.Create(&user); result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create user",
-		})
+		return utils.ServerErrorResponse(c, "Failed to create user")
 	}
 
 	// Generate JWT token
 	cfg := c.Locals("config").(*config.Config)
 	token, err := middlewares.GenerateToken(user.ID.String(), cfg)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to generate token",
-		})
+		return utils.ServerErrorResponse(c, "Failed to generate token")
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+	// Create response data
+	responseData := fiber.Map{
 		"token": token,
 		"user": models.UserResponse{
 			ID:        user.ID.String(),
@@ -70,40 +62,35 @@ func Register(c *fiber.Ctx) error {
 			Email:     user.Email,
 			CreatedAt: user.CreatedAt,
 		},
-	})
+	}
+
+	return utils.SuccessResponse(c, responseData, "User registered successfully")
 }
 
 func Login(c *fiber.Ctx) error {
 	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid request body", []string{"Failed to parse request body"})
 	}
 
 	var user models.User
 	if result := database.DB.Where("email = ?", req.Email).First(&user); result.Error != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid credentials",
-		})
+		return utils.UnauthorizedResponse(c, "Invalid credentials")
 	}
 
 	if !user.CheckPassword(req.Password) {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid credentials",
-		})
+		return utils.UnauthorizedResponse(c, "Invalid credentials")
 	}
 
 	// Generate JWT token
 	cfg := c.Locals("config").(*config.Config)
 	token, err := middlewares.GenerateToken(user.ID.String(), cfg)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to generate token",
-		})
+		return utils.ServerErrorResponse(c, "Failed to generate token")
 	}
 
-	return c.JSON(fiber.Map{
+	// Create response data
+	responseData := fiber.Map{
 		"token": token,
 		"user": models.UserResponse{
 			ID:        user.ID.String(),
@@ -111,5 +98,7 @@ func Login(c *fiber.Ctx) error {
 			Email:     user.Email,
 			CreatedAt: user.CreatedAt,
 		},
-	})
+	}
+
+	return utils.SuccessResponse(c, responseData, "Login successful")
 }

@@ -13,8 +13,8 @@ class CarRepository {
 
   Future<List<Car>> getCars() async {
     try {
-      final response = await _dio.get('$_baseUrl/cars');
-      final List<dynamic> data = response.data['data'];
+      final response = await _dio.get('$_baseUrl/api/cars');
+      final List<dynamic> data = response.data;
       return data.map((json) => Car.fromJson(json)).toList();
     } catch (e) {
       throw Exception('Failed to fetch cars: ${e.toString()}');

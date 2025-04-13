@@ -3,6 +3,7 @@ package controllers
 import (
 	"car-rental-backend/database"
 	"car-rental-backend/models"
+	"car-rental-backend/utils"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,46 +19,34 @@ type CreateBookingRequest struct {
 func CreateBooking(c *fiber.Ctx) error {
 	var req CreateBookingRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid request body", []string{"Failed to parse request body"})
 	}
 
 	// Validate time range
 	if req.EndTime.Before(req.StartTime) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "End time must be after start time",
-		})
+		return utils.ValidationErrorResponse(c, "End time must be after start time", []string{"Invalid time range"})
 	}
 
 	// Parse car ID
 	carID, err := uuid.Parse(req.CarID)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid car ID",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid car ID", []string{"Invalid UUID format"})
 	}
 
 	// Get user ID from context (set by auth middleware)
 	userID, err := uuid.Parse(c.Locals("user_id").(string))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Invalid user ID",
-		})
+		return utils.ServerErrorResponse(c, "Invalid user ID")
 	}
 
 	// Check if car exists and is available
 	var car models.Car
 	if result := database.DB.First(&car, "id = ?", carID); result.Error != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Car not found",
-		})
+		return utils.NotFoundResponse(c, "Car not found")
 	}
 
 	if !car.IsAvailable {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-			"error": "Car is not available",
-		})
+		return utils.ConflictResponse(c, "Car is not available")
 	}
 
 	// Check for booking conflicts
@@ -68,9 +57,7 @@ func CreateBooking(c *fiber.Ctx) error {
 		Count(&conflictCount)
 
 	if conflictCount > 0 {
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-			"error": "Car is already booked for this time period",
-		})
+		return utils.ConflictResponse(c, "Car is already booked for this time period")
 	}
 
 	// Calculate total price
@@ -88,39 +75,31 @@ func CreateBooking(c *fiber.Ctx) error {
 	}
 
 	if result := database.DB.Create(&booking); result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create booking",
-		})
+		return utils.ServerErrorResponse(c, "Failed to create booking")
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(booking)
+	return utils.SuccessResponse(c, booking, "Booking created successfully")
 }
 
 func GetBooking(c *fiber.Ctx) error {
 	id := c.Params("id")
 	bookingID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid booking ID",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid booking ID", []string{"Invalid UUID format"})
 	}
 
 	var booking models.Booking
 	if result := database.DB.Preload("User").Preload("Car").First(&booking, "id = ?", bookingID); result.Error != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Booking not found",
-		})
+		return utils.NotFoundResponse(c, "Booking not found")
 	}
 
 	// Check if the user is authorized to view this booking
 	userID := c.Locals("user_id").(string)
 	if booking.UserID.String() != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "Not authorized to view this booking",
-		})
+		return utils.ForbiddenResponse(c, "Not authorized to view this booking")
 	}
 
-	return c.JSON(booking)
+	return utils.SuccessResponse(c, booking, "Booking fetched successfully")
 }
 
 func GetUserBookings(c *fiber.Ctx) error {
@@ -128,52 +107,40 @@ func GetUserBookings(c *fiber.Ctx) error {
 
 	var bookings []models.Booking
 	if result := database.DB.Preload("Car").Where("user_id = ?", userID).Find(&bookings); result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to fetch bookings",
-		})
+		return utils.ServerErrorResponse(c, "Failed to fetch bookings")
 	}
 
-	return c.JSON(bookings)
+	return utils.SuccessResponse(c, bookings, "User bookings fetched successfully")
 }
 
 func CancelBooking(c *fiber.Ctx) error {
 	id := c.Params("id")
 	bookingID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid booking ID",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid booking ID", []string{"Invalid UUID format"})
 	}
 
 	var booking models.Booking
 	if result := database.DB.First(&booking, "id = ?", bookingID); result.Error != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Booking not found",
-		})
+		return utils.NotFoundResponse(c, "Booking not found")
 	}
 
 	// Check if the user is authorized to cancel this booking
 	userID := c.Locals("user_id").(string)
 	if booking.UserID.String() != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "Not authorized to cancel this booking",
-		})
+		return utils.ForbiddenResponse(c, "Not authorized to cancel this booking")
 	}
 
 	// Check if booking is already cancelled or completed
 	if booking.Status != models.BookingStatusBooked {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Booking is already " + string(booking.Status),
-		})
+		return utils.ValidationErrorResponse(c, "Booking is already "+string(booking.Status), []string{"Invalid booking status"})
 	}
 
 	// Update booking status
 	booking.Status = models.BookingStatusCancelled
 	if result := database.DB.Save(&booking); result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to cancel booking",
-		})
+		return utils.ServerErrorResponse(c, "Failed to cancel booking")
 	}
 
-	return c.JSON(booking)
+	return utils.SuccessResponse(c, booking, "Booking cancelled successfully")
 }

@@ -4,7 +4,7 @@ class User extends Equatable {
   final String id;
   final String name;
   final String email;
-  final String role;
+  final String token;
   final DateTime createdAt;
   final DateTime? lastLogin;
 
@@ -12,7 +12,7 @@ class User extends Equatable {
     required this.id,
     required this.name,
     required this.email,
-    required this.role,
+    required this.token,
     required this.createdAt,
     this.lastLogin,
   });
@@ -22,8 +22,8 @@ class User extends Equatable {
       id: json['id'] as String,
       name: json['name'] as String,
       email: json['email'] as String,
-      role: json['role'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      token: json['token'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
       lastLogin: json['lastLogin'] != null
           ? DateTime.parse(json['lastLogin'] as String)
           : null,
@@ -35,12 +35,12 @@ class User extends Equatable {
       'id': id,
       'name': name,
       'email': email,
-      'role': role,
-      'createdAt': createdAt.toIso8601String(),
+      'token': token,
+      'created_at': createdAt.toIso8601String(),
       'lastLogin': lastLogin?.toIso8601String(),
     };
   }
 
   @override
-  List<Object?> get props => [id, name, email, role, createdAt, lastLogin];
+  List<Object?> get props => [id, name, email,  createdAt, lastLogin];
 } 

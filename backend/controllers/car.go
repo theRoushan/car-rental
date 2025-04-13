@@ -3,6 +3,7 @@ package controllers
 import (
 	"car-rental-backend/database"
 	"car-rental-backend/models"
+	"car-rental-backend/utils"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,9 +30,7 @@ type UpdateCarRequest struct {
 func CreateCar(c *fiber.Ctx) error {
 	var req CreateCarRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid request body", []string{"Failed to parse request body"})
 	}
 
 	car := models.Car{
@@ -44,65 +43,51 @@ func CreateCar(c *fiber.Ctx) error {
 	}
 
 	if result := database.DB.Create(&car); result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create car",
-		})
+		return utils.ServerErrorResponse(c, "Failed to create car")
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(car)
+	return utils.SuccessResponse(c, car, "Car created successfully")
 }
 
 func GetCars(c *fiber.Ctx) error {
 	var cars []models.Car
 	if result := database.DB.Find(&cars); result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to fetch cars",
-		})
+		return utils.ServerErrorResponse(c, "Failed to fetch cars")
 	}
 
-	return c.JSON(cars)
+	return utils.SuccessResponse(c, cars, "Cars fetched successfully")
 }
 
 func GetCar(c *fiber.Ctx) error {
 	id := c.Params("id")
 	carID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid car ID",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid car ID", []string{"Invalid UUID format"})
 	}
 
 	var car models.Car
 	if result := database.DB.First(&car, "id = ?", carID); result.Error != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Car not found",
-		})
+		return utils.NotFoundResponse(c, "Car not found")
 	}
 
-	return c.JSON(car)
+	return utils.SuccessResponse(c, car, "Car fetched successfully")
 }
 
 func UpdateCar(c *fiber.Ctx) error {
 	id := c.Params("id")
 	carID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid car ID",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid car ID", []string{"Invalid UUID format"})
 	}
 
 	var car models.Car
 	if result := database.DB.First(&car, "id = ?", carID); result.Error != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "Car not found",
-		})
+		return utils.NotFoundResponse(c, "Car not found")
 	}
 
 	var req UpdateCarRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid request body", []string{"Failed to parse request body"})
 	}
 
 	// Update fields if provided
@@ -124,30 +109,24 @@ func UpdateCar(c *fiber.Ctx) error {
 	car.IsAvailable = req.IsAvailable
 
 	if result := database.DB.Save(&car); result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to update car",
-		})
+		return utils.ServerErrorResponse(c, "Failed to update car")
 	}
 
-	return c.JSON(car)
+	return utils.SuccessResponse(c, car, "Car updated successfully")
 }
 
 func DeleteCar(c *fiber.Ctx) error {
 	id := c.Params("id")
 	carID, err := uuid.Parse(id)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid car ID",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid car ID", []string{"Invalid UUID format"})
 	}
 
 	if result := database.DB.Delete(&models.Car{}, "id = ?", carID); result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to delete car",
-		})
+		return utils.ServerErrorResponse(c, "Failed to delete car")
 	}
 
-	return c.SendStatus(fiber.StatusNoContent)
+	return utils.SuccessResponse(c, nil, "Car deleted successfully")
 }
 
 func GetAvailableCars(c *fiber.Ctx) error {
@@ -155,29 +134,21 @@ func GetAvailableCars(c *fiber.Ctx) error {
 	endTime := c.Query("end")
 
 	if startTime == "" || endTime == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Start and end times are required",
-		})
+		return utils.ValidationErrorResponse(c, "Start and end times are required", []string{"Missing required query parameters"})
 	}
 
 	start, err := time.Parse(time.RFC3339, startTime)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid start time format",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid start time format", []string{"Start time must be in RFC3339 format"})
 	}
 
 	end, err := time.Parse(time.RFC3339, endTime)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid end time format",
-		})
+		return utils.ValidationErrorResponse(c, "Invalid end time format", []string{"End time must be in RFC3339 format"})
 	}
 
 	if end.Before(start) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "End time must be after start time",
-		})
+		return utils.ValidationErrorResponse(c, "End time must be after start time", []string{"Invalid time range"})
 	}
 
 	var cars []models.Car
@@ -186,10 +157,8 @@ func GetAvailableCars(c *fiber.Ctx) error {
 			models.BookingStatusBooked, end, start)
 
 	if result := query.Find(&cars); result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to fetch available cars",
-		})
+		return utils.ServerErrorResponse(c, "Failed to fetch available cars")
 	}
 
-	return c.JSON(cars)
+	return utils.SuccessResponse(c, cars, "Available cars fetched successfully")
 }
