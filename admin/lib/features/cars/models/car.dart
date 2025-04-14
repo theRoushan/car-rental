@@ -2,27 +2,23 @@ import 'package:equatable/equatable.dart';
 
 class Car extends Equatable {
   final String id;
-  final String brand;
+  final String name;
   final String model;
-  final String year;
-  final String color;
-  final double price;
-  final String imageUrl;
+  final String licensePlate;
+  final String location;
+  final double hourlyRate;
   final bool isAvailable;
-  final String description;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
   const Car({
     required this.id,
-    required this.brand,
+    required this.name,
     required this.model,
-    required this.year,
-    required this.color,
-    required this.price,
-    required this.imageUrl,
+    required this.licensePlate,
+    required this.location,
+    required this.hourlyRate,
     required this.isAvailable,
-    required this.description,
     required this.createdAt,
     this.updatedAt,
   });
@@ -30,17 +26,15 @@ class Car extends Equatable {
   factory Car.fromJson(Map<String, dynamic> json) {
     return Car(
       id: json['id'] as String,
-      brand: json['brand'] as String,
+      name: json['name'] as String,
       model: json['model'] as String,
-      year: json['year'] as String,
-      color: json['color'] as String,
-      price: (json['price'] as num).toDouble(),
-      imageUrl: json['imageUrl'] as String,
-      isAvailable: json['isAvailable'] as bool,
-      description: json['description'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
+      licensePlate: json['license_plate'] as String,
+      location: json['location'] as String,
+      hourlyRate: (json['hourly_rate'] as num).toDouble(),
+      isAvailable: json['is_available'] as bool,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
           : null,
     );
   }
@@ -48,42 +42,36 @@ class Car extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'brand': brand,
+      'name': name,
       'model': model,
-      'year': year,
-      'color': color,
-      'price': price,
-      'imageUrl': imageUrl,
-      'isAvailable': isAvailable,
-      'description': description,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
+      'license_plate': licensePlate,
+      'location': location,
+      'hourly_rate': hourlyRate,
+      'is_available': isAvailable,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
 
   Car copyWith({
     String? id,
-    String? brand,
+    String? name,
     String? model,
-    String? year,
-    String? color,
-    double? price,
-    String? imageUrl,
+    String? licensePlate,
+    String? location,
+    double? hourlyRate,
     bool? isAvailable,
-    String? description,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return Car(
       id: id ?? this.id,
-      brand: brand ?? this.brand,
+      name: name ?? this.name,
       model: model ?? this.model,
-      year: year ?? this.year,
-      color: color ?? this.color,
-      price: price ?? this.price,
-      imageUrl: imageUrl ?? this.imageUrl,
+      licensePlate: licensePlate ?? this.licensePlate,
+      location: location ?? this.location,
+      hourlyRate: hourlyRate ?? this.hourlyRate,
       isAvailable: isAvailable ?? this.isAvailable,
-      description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -92,15 +80,13 @@ class Car extends Equatable {
   @override
   List<Object?> get props => [
         id,
-        brand,
+        name,
         model,
-        year,
-        color,
-        price,
-        imageUrl,
+        licensePlate,
+        location,
+        hourlyRate,
         isAvailable,
-        description,
         createdAt,
         updatedAt,
       ];
-} 
+}

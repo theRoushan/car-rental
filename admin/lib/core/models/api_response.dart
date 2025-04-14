@@ -49,6 +49,16 @@ class ApiResponse<T> {
     );
   }
 
+  factory ApiResponse.fromJsonAsList(Map<String, dynamic> json, T Function(List<dynamic>) fromJson) {
+    return ApiResponse<T>(
+      success: json['success'] ?? false,
+      message: json['message'],
+      data: json['data'] != null ? fromJson(json['data']) : null,
+      errors: json['errors'] != null ? List<String>.from(json['errors']) : null,
+      statusCode: json['statusCode'],
+    );
+  }
+
   Map<String, dynamic> toJson(Map<String, dynamic> Function(T) toJson) {
     return {
       'success': success,

@@ -45,7 +45,7 @@ func CreateBooking(c *fiber.Ctx) error {
 		return utils.NotFoundResponse(c, "Car not found")
 	}
 
-	if !car.IsAvailable {
+	if !car.Status.IsAvailable {
 		return utils.ConflictResponse(c, "Car is not available")
 	}
 
@@ -62,7 +62,16 @@ func CreateBooking(c *fiber.Ctx) error {
 
 	// Calculate total price
 	hours := req.EndTime.Sub(req.StartTime).Hours()
-	totalPrice := hours * car.HourlyRate
+	var totalPrice float64
+
+	if hours <= 24 && car.RentalInfo.RentalPricePerHour != nil {
+		// Use hourly rate for bookings less than 24 hours
+		totalPrice = hours * *car.RentalInfo.RentalPricePerHour
+	} else {
+		// Use daily rate for bookings more than 24 hours
+		days := hours / 24
+		totalPrice = days * car.RentalInfo.RentalPricePerDay
+	}
 
 	// Create booking
 	booking := models.Booking{
@@ -76,6 +85,12 @@ func CreateBooking(c *fiber.Ctx) error {
 
 	if result := database.DB.Create(&booking); result.Error != nil {
 		return utils.ServerErrorResponse(c, "Failed to create booking")
+	}
+
+	// Update car status
+	car.Status.IsAvailable = false
+	if result := database.DB.Save(&car); result.Error != nil {
+		return utils.ServerErrorResponse(c, "Failed to update car status")
 	}
 
 	return utils.SuccessResponse(c, booking, "Booking created successfully")

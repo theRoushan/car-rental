@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../models/car.dart';
+import '../../../core/models/api_response.dart';
 
 class CarRepository {
   final Dio _dio;
@@ -14,8 +15,19 @@ class CarRepository {
   Future<List<Car>> getCars() async {
     try {
       final response = await _dio.get('$_baseUrl/api/cars');
-      final List<dynamic> data = response.data;
-      return data.map((json) => Car.fromJson(json)).toList();
+      final apiResponse = ApiResponse<List<dynamic>>.fromJsonAsList(
+        response.data,
+        (json) => json.map((item) => Car.fromJson(item as Map<String, dynamic>)).toList(),
+      );
+      
+      if (!apiResponse.success) {
+        throw Exception(apiResponse.message ?? 'Failed to fetch cars');
+      }
+      if (apiResponse.data == null) {
+        return [];
+      }
+
+      return apiResponse.data! as List<Car>;
     } catch (e) {
       throw Exception('Failed to fetch cars: ${e.toString()}');
     }
@@ -24,7 +36,20 @@ class CarRepository {
   Future<Car> getCar(String id) async {
     try {
       final response = await _dio.get('$_baseUrl/cars/$id');
-      return Car.fromJson(response.data['data']);
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json as Map<String, dynamic>,
+      );
+      
+      if (!apiResponse.success) {
+        throw Exception(apiResponse.message ?? 'Failed to fetch car');
+      }
+      
+      if (apiResponse.data == null) {
+        throw Exception('Car not found');
+      }
+      
+      return Car.fromJson(apiResponse.data!);
     } catch (e) {
       throw Exception('Failed to fetch car: ${e.toString()}');
     }
@@ -36,7 +61,20 @@ class CarRepository {
         '$_baseUrl/cars',
         data: car.toJson(),
       );
-      return Car.fromJson(response.data['data']);
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json as Map<String, dynamic>,
+      );
+      
+      if (!apiResponse.success) {
+        throw Exception(apiResponse.message ?? 'Failed to create car');
+      }
+      
+      if (apiResponse.data == null) {
+        throw Exception('Failed to create car: No data returned');
+      }
+      
+      return Car.fromJson(apiResponse.data!);
     } catch (e) {
       throw Exception('Failed to create car: ${e.toString()}');
     }
@@ -48,7 +86,20 @@ class CarRepository {
         '$_baseUrl/cars/${car.id}',
         data: car.toJson(),
       );
-      return Car.fromJson(response.data['data']);
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json as Map<String, dynamic>,
+      );
+      
+      if (!apiResponse.success) {
+        throw Exception(apiResponse.message ?? 'Failed to update car');
+      }
+      
+      if (apiResponse.data == null) {
+        throw Exception('Failed to update car: No data returned');
+      }
+      
+      return Car.fromJson(apiResponse.data!);
     } catch (e) {
       throw Exception('Failed to update car: ${e.toString()}');
     }
@@ -56,7 +107,15 @@ class CarRepository {
 
   Future<void> deleteCar(String id) async {
     try {
-      await _dio.delete('$_baseUrl/cars/$id');
+      final response = await _dio.delete('$_baseUrl/cars/$id');
+      final apiResponse = ApiResponse<dynamic>.fromJson(
+        response.data,
+        (json) => json,
+      );
+      
+      if (!apiResponse.success) {
+        throw Exception(apiResponse.message ?? 'Failed to delete car');
+      }
     } catch (e) {
       throw Exception('Failed to delete car: ${e.toString()}');
     }
@@ -68,7 +127,20 @@ class CarRepository {
         '$_baseUrl/cars/$id/availability',
         data: {'isAvailable': isAvailable},
       );
-      return Car.fromJson(response.data['data']);
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json as Map<String, dynamic>,
+      );
+      
+      if (!apiResponse.success) {
+        throw Exception(apiResponse.message ?? 'Failed to toggle car availability');
+      }
+      
+      if (apiResponse.data == null) {
+        throw Exception('Failed to toggle car availability: No data returned');
+      }
+      
+      return Car.fromJson(apiResponse.data!);
     } catch (e) {
       throw Exception('Failed to toggle car availability: ${e.toString()}');
     }
@@ -80,8 +152,21 @@ class CarRepository {
         '$_baseUrl/cars/search',
         queryParameters: {'q': query},
       );
-      final List<dynamic> data = response.data['data'];
-      return data.map((json) => Car.fromJson(json)).toList();
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json as Map<String, dynamic>,
+      );
+      
+      if (!apiResponse.success) {
+        throw Exception(apiResponse.message ?? 'Failed to search cars');
+      }
+      
+      if (apiResponse.data == null) {
+        return [];
+      }
+      
+      final carsData = apiResponse.data!['cars'] as List<dynamic>;
+      return carsData.map((item) => Car.fromJson(item as Map<String, dynamic>)).toList();
     } catch (e) {
       throw Exception('Failed to search cars: ${e.toString()}');
     }
@@ -107,8 +192,21 @@ class CarRepository {
           if (maxPrice != null) 'maxPrice': maxPrice,
         },
       );
-      final List<dynamic> data = response.data['data'];
-      return data.map((json) => Car.fromJson(json)).toList();
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json as Map<String, dynamic>,
+      );
+      
+      if (!apiResponse.success) {
+        throw Exception(apiResponse.message ?? 'Failed to filter cars');
+      }
+      
+      if (apiResponse.data == null) {
+        return [];
+      }
+      
+      final carsData = apiResponse.data!['cars'] as List<dynamic>;
+      return carsData.map((item) => Car.fromJson(item as Map<String, dynamic>)).toList();
     } catch (e) {
       throw Exception('Failed to filter cars: ${e.toString()}');
     }

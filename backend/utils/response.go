@@ -36,10 +36,16 @@ func ErrorResponse(c *fiber.Ctx, message string, errors []string, statusCode int
 		statusCode = fiber.StatusBadRequest
 	}
 
+	// Format error messages
+	formattedErrors := make([]string, len(errors))
+	for i, err := range errors {
+		formattedErrors[i] = err
+	}
+
 	response := ApiResponse{
 		Success:    false,
 		Message:    message,
-		Errors:     errors,
+		Errors:     formattedErrors,
 		StatusCode: statusCode,
 	}
 

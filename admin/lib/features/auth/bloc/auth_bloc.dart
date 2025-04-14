@@ -49,20 +49,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final response = await _apiService.post<User>(
+      final response = await _apiService.post<Map<String, dynamic>>(
         '/auth/login',
         data: {
           'email': event.email,
           'password': event.password,
         },
-        fromJson: (json) => User.fromJson(json),
+        fromJson: (json) => json as Map<String, dynamic>,
       );
 
       if (response.success && response.data != null) {
-        final token = response.data!.token;
+        final token = response.data!['token'] as String;
+        final userData = response.data!['user'] as Map<String, dynamic>;
+        final user = User.fromJson(userData);
+        
         await _prefs.setString(_tokenKey, token);
-        await _prefs.setString(_userKey, json.encode(response.data!.toJson()));
-        emit(Authenticated(response.data!));
+        await _prefs.setString(_userKey, json.encode(user.toJson()));
+        emit(Authenticated(user));
       } else {
         emit(AuthError(response.message ?? 'Login failed'));
       }
@@ -79,7 +82,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final response = await _apiService.post<User>(
+      final response = await _apiService.post<Map<String, dynamic>>(
         '/auth/register',
         data: {
           'name': event.name,
@@ -87,14 +90,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'password': event.password,
           'role': 'admin',
         },
-        fromJson: (json) => User.fromJson(json),
+        fromJson: (json) => json as Map<String, dynamic>,
       );
 
       if (response.success && response.data != null) {
-        final token = response.data!.token;
+        final token = response.data!['token'] as String;
+        final userData = response.data!['user'] as Map<String, dynamic>;
+        final user = User.fromJson(userData);
+        
         await _prefs.setString(_tokenKey, token);
-        await _prefs.setString(_userKey, json.encode(response.data!.toJson()));
-        emit(Authenticated(response.data!));
+        await _prefs.setString(_userKey, json.encode(user.toJson()));
+        emit(Authenticated(user));
       } else {
         emit(AuthError(response.message ?? 'Registration failed'));
       }

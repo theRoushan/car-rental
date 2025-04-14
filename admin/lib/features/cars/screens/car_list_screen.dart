@@ -123,7 +123,7 @@ class CarCard extends StatelessWidget {
             AspectRatio(
               aspectRatio: 16 / 9,
               child: Image.network(
-                car.imageUrl,
+                car.name,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
@@ -143,7 +143,7 @@ class CarCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${car.brand} ${car.model}',
+                    '${car.model} ${car.model}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -153,14 +153,14 @@ class CarCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    car.year,
+                    car.licensePlate,
                     style: TextStyle(
                       color: Colors.grey[600],
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '\$${car.price.toStringAsFixed(2)}/day',
+                    '\$${car.hourlyRate.toStringAsFixed(2)}/day',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

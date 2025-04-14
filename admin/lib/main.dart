@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/di/injection_container.dart' as di;
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_state.dart';
+import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/cars/bloc/car_bloc.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
@@ -40,16 +41,37 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthenticationWrapper extends StatelessWidget {
+class AuthenticationWrapper extends StatefulWidget {
   const AuthenticationWrapper({super.key});
+
+  @override
+  State<AuthenticationWrapper> createState() => _AuthenticationWrapperState();
+}
+
+class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    // Check authentication status when the widget is first built
+    context.read<AuthBloc>().add(CheckAuthStatus());
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
+        if (state is AuthLoading) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        
         if (state is Authenticated) {
           return const DashboardScreen();
         }
+        
         return const LoginScreen();
       },
     );

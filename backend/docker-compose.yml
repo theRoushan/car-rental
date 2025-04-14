@@ -17,6 +17,7 @@ services:
     volumes:
       - .:/app
       - app-data:/app/bin
+      - ./migrations:/app/migrations
     networks:
       - car-rental-network
 
