@@ -1,6 +1,6 @@
 # Car Rental Backend
 
-A production-level car rental application backend built with Go, Fiber, and PostgreSQL.
+This is the backend API for the car rental application. The system uses a normalized database structure optimized for performance and scalability.
 
 ## Features
 
@@ -88,88 +88,82 @@ The car model includes comprehensive information:
 - Owner ID, name
 - Contact information
 
+## Database Optimization
+
+### Normalized Database Structure
+
+We've implemented a normalized database structure for better performance and scalability:
+
+1. **Core Tables**:
+   - `cars`: Contains basic car details (make, model, year, etc.)
+   - `owners`: Stores owner information
+   - `car_locations`: Tracks where cars are located
+   - `car_rental_infos`: Stores rental pricing and terms
+   - `car_media`: Manages car images and videos
+   - `car_documents`: Organizes documents (insurance, registration, etc.)
+   - `car_statuses`: Tracks car availability and maintenance status
+   - `bookings`: Manages car reservations
+
+2. **Benefits**:
+   - **Reduced Update Costs**: Updates to frequently changing data only affect smaller tables
+   - **Improved Query Performance**: Can query just what's needed without loading all car data
+   - **Better Data Integrity**: Proper relationships help enforce referential integrity
+   - **Support for History**: Can maintain history of changes (especially for status)
+   - **Scalability**: Better handles a growing system with thousands of cars and operations
+
+3. **Relationships**:
+   - Cars have one-to-many relationships with media, documents, and bookings
+   - Cars have one-to-one relationships with location, rental info, and status
+   - Owners have one-to-many relationships with cars
+
+### Data Access Layer
+
+1. **Service Pattern**:
+   - Implemented `CarService` to abstract database operations
+   - All car-related operations use transactions for data consistency
+   - Efficient query patterns for loading related data
+
+2. **API Compatibility**:
+   - Maintained backward compatibility with API responses
+   - Added `ToCarResponse()` method to present normalized data in a flattened format
+
+### Migration
+
+1. **Migration Scripts**:
+   - Created `002_normalize_car_tables.up.sql` to create normalized tables
+   - Data migration logic to transfer existing data to new structure
+   - Rollback migration in `002_normalize_car_tables.down.sql`
+
 ## Getting Started
 
 ### Prerequisites
 
-- Go 1.24 or higher
-- Docker and Docker Compose
-- PostgreSQL 15 (if running locally)
+- Go 1.18 or later
+- PostgreSQL 13 or later
 
-### Environment Variables
+### Installation
 
-Create a `.env` file in the root directory with the following variables:
-
+1. Clone the repository
+2. Set up your `.env` file with database credentials
+3. Run migrations:
 ```
-DB_HOST=postgres
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=car_rental
-DB_SSL_MODE=disable
-JWT_SECRET=your_jwt_secret
-PORT=8080
+go run bin/migrate.go -up
+```
+4. Start the server:
+```
+go run cmd/api/main.go
 ```
 
-### Deployment
+## API Documentation
 
-#### Using the Deployment Script
+The API follows RESTful principles:
 
-The easiest way to deploy the application is using the provided deployment script:
-
-```bash
-# Make the script executable
-chmod +x deploy.sh
-
-# Run the deployment script
-./deploy.sh
-```
-
-This script will:
-1. Build the migration tool
-2. Build the Docker image
-3. Start the services
-4. Run the database migrations
-
-#### Manual Deployment
-
-If you prefer to deploy manually:
-
-```bash
-# Build the Docker image
-docker-compose build
-
-# Start the services
-docker-compose up -d
-
-# Run migrations (after the database is ready)
-docker-compose exec app /app/bin/migrate -up
-```
-
-### API Endpoints
-
-#### Cars
-
-- `POST /api/cars` - Create a new car
-- `GET /api/cars` - List all cars
-- `GET /api/cars/:id` - Get a specific car
-- `PUT /api/cars/:id` - Update a car
-- `DELETE /api/cars/:id` - Delete a car
-- `GET /api/cars/available` - Get available cars
-
-#### Bookings
-
-- `POST /api/bookings` - Create a new booking
-- `GET /api/bookings` - List all bookings
-- `GET /api/bookings/:id` - Get a specific booking
-- `PUT /api/bookings/:id` - Update a booking
-- `DELETE /api/bookings/:id` - Delete a booking
-
-#### Authentication
-
-- `POST /api/auth/register` - Register a new user
-- `POST /api/auth/login` - Login a user
-- `GET /api/auth/me` - Get current user information
+- `GET /api/cars`: Get all cars
+- `GET /api/cars/:id`: Get a specific car
+- `POST /api/cars`: Create a new car
+- `PUT /api/cars/:id`: Update a car
+- `DELETE /api/cars/:id`: Delete a car
+- `GET /api/cars/available`: Get available cars for a time period
 
 ## Development
 
@@ -185,13 +179,3 @@ go run bin/migrate.go -up
 # Start the server
 go run cmd/api/main.go
 ```
-
-### Running Tests
-
-```bash
-go test ./...
-```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 

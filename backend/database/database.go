@@ -31,6 +31,12 @@ func InitDB(cfg *config.Config) error {
 		&models.User{},
 		&models.Car{},
 		&models.Booking{},
+		&models.Owner{},
+		&models.CarLocation{},
+		&models.CarRentalInfo{},
+		&models.CarMedia{},
+		&models.CarDocument{},
+		&models.CarStatus{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %v", err)

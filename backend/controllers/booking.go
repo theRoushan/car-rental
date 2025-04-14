@@ -3,7 +3,9 @@ package controllers
 import (
 	"car-rental-backend/database"
 	"car-rental-backend/models"
+	"car-rental-backend/services"
 	"car-rental-backend/utils"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,7 +21,10 @@ type CreateBookingRequest struct {
 func CreateBooking(c *fiber.Ctx) error {
 	var req CreateBookingRequest
 	if err := c.BodyParser(&req); err != nil {
-		return utils.ValidationErrorResponse(c, "Invalid request body", []string{"Failed to parse request body"})
+		fmt.Println("Parsing error:", err.Error())
+		return utils.ValidationErrorResponse(c, "Invalid request body", []string{
+			"Failed to parse request body: " + err.Error(),
+		})
 	}
 
 	// Validate time range
@@ -41,11 +46,11 @@ func CreateBooking(c *fiber.Ctx) error {
 
 	// Check if car exists and is available
 	var car models.Car
-	if result := database.DB.First(&car, "id = ?", carID); result.Error != nil {
+	if result := database.DB.Preload("CurrentStatus").First(&car, "id = ?", carID); result.Error != nil {
 		return utils.NotFoundResponse(c, "Car not found")
 	}
 
-	if !car.Status.IsAvailable {
+	if car.CurrentStatus == nil || !car.CurrentStatus.IsAvailable {
 		return utils.ConflictResponse(c, "Car is not available")
 	}
 
@@ -88,8 +93,8 @@ func CreateBooking(c *fiber.Ctx) error {
 	}
 
 	// Update car status
-	car.Status.IsAvailable = false
-	if result := database.DB.Save(&car); result.Error != nil {
+	carService := services.NewCarService()
+	if err := carService.UpdateCarAvailability(carID, false); err != nil {
 		return utils.ServerErrorResponse(c, "Failed to update car status")
 	}
 
@@ -155,6 +160,12 @@ func CancelBooking(c *fiber.Ctx) error {
 	booking.Status = models.BookingStatusCancelled
 	if result := database.DB.Save(&booking); result.Error != nil {
 		return utils.ServerErrorResponse(c, "Failed to cancel booking")
+	}
+
+	// Make the car available again
+	carService := services.NewCarService()
+	if err := carService.UpdateCarAvailability(booking.CarID, true); err != nil {
+		return utils.ServerErrorResponse(c, "Failed to update car availability")
 	}
 
 	return utils.SuccessResponse(c, booking, "Booking cancelled successfully")

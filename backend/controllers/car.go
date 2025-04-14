@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"car-rental-backend/database"
 	"car-rental-backend/models"
+	"car-rental-backend/services"
 	"car-rental-backend/utils"
 	"time"
 
@@ -50,27 +50,27 @@ type CreateCarRequest struct {
 
 	// Documentation
 	Documentation struct {
-		InsuranceExpiryDate     time.Time `json:"insurance_expiry_date" validate:"required"`
-		PollutionCertValidity   time.Time `json:"pollution_certificate_validity" validate:"required"`
-		RegistrationCertificate string    `json:"registration_certificate" validate:"required"`
-		FitnessCertificate      string    `json:"fitness_certificate" validate:"required"`
-		PermitType              string    `json:"permit_type" validate:"required,oneof=Self-drive Commercial"`
+		InsuranceExpiryDate     string `json:"insurance_expiry_date" validate:"required"`
+		PollutionCertValidity   string `json:"pollution_certificate_validity" validate:"required"`
+		RegistrationCertificate string `json:"registration_certificate" validate:"required"`
+		FitnessCertificate      string `json:"fitness_certificate" validate:"required"`
+		PermitType              string `json:"permit_type" validate:"required,oneof=Self-drive Commercial"`
 	} `json:"documentation" validate:"required"`
 
 	// Status Info
 	Status struct {
-		IsAvailable            bool      `json:"is_available"`
-		CurrentOdometerReading float64   `json:"current_odometer_reading" validate:"required,min=0"`
-		LastServiceDate        time.Time `json:"last_service_date" validate:"required"`
-		NextServiceDue         time.Time `json:"next_service_due" validate:"required"`
-		DamagesOrIssues        *string   `json:"damages_or_issues,omitempty"`
+		IsAvailable            bool    `json:"is_available"`
+		CurrentOdometerReading float64 `json:"current_odometer_reading" validate:"required,min=0"`
+		LastServiceDate        string  `json:"last_service_date" validate:"required"`
+		NextServiceDue         string  `json:"next_service_due" validate:"required"`
+		DamagesOrIssues        *string `json:"damages_or_issues,omitempty"`
 	} `json:"status" validate:"required"`
 
 	// Owner Info
 	Owner struct {
-		OwnerID     uuid.UUID `json:"owner_id" validate:"required"`
-		OwnerName   string    `json:"owner_name" validate:"required"`
-		ContactInfo string    `json:"contact_info" validate:"required"`
+		OwnerID     *uuid.UUID `json:"owner_id,omitempty"`
+		OwnerName   string     `json:"owner_name" validate:"required"`
+		ContactInfo string     `json:"contact_info" validate:"required"`
 	} `json:"owner" validate:"required"`
 }
 
@@ -108,26 +108,27 @@ type UpdateCarRequest struct {
 
 	// Media
 	Media *struct {
-		Images []string `json:"images,omitempty"`
-		Video  *string  `json:"video,omitempty"`
+		AddImages    []string `json:"add_images,omitempty"`
+		RemoveImages []string `json:"remove_images,omitempty"`
+		Video        *string  `json:"video,omitempty"`
 	} `json:"media,omitempty"`
 
 	// Documentation
 	Documentation *struct {
-		InsuranceExpiryDate     *time.Time `json:"insurance_expiry_date,omitempty"`
-		PollutionCertValidity   *time.Time `json:"pollution_certificate_validity,omitempty"`
-		RegistrationCertificate *string    `json:"registration_certificate,omitempty"`
-		FitnessCertificate      *string    `json:"fitness_certificate,omitempty"`
-		PermitType              *string    `json:"permit_type,omitempty"`
+		InsuranceExpiryDate     *string `json:"insurance_expiry_date,omitempty"`
+		PollutionCertValidity   *string `json:"pollution_certificate_validity,omitempty"`
+		RegistrationCertificate *string `json:"registration_certificate,omitempty"`
+		FitnessCertificate      *string `json:"fitness_certificate,omitempty"`
+		PermitType              *string `json:"permit_type,omitempty"`
 	} `json:"documentation,omitempty"`
 
 	// Status Info
 	Status *struct {
-		IsAvailable            *bool      `json:"is_available,omitempty"`
-		CurrentOdometerReading *float64   `json:"current_odometer_reading,omitempty"`
-		LastServiceDate        *time.Time `json:"last_service_date,omitempty"`
-		NextServiceDue         *time.Time `json:"next_service_due,omitempty"`
-		DamagesOrIssues        *string    `json:"damages_or_issues,omitempty"`
+		IsAvailable            *bool    `json:"is_available,omitempty"`
+		CurrentOdometerReading *float64 `json:"current_odometer_reading,omitempty"`
+		LastServiceDate        *string  `json:"last_service_date,omitempty"`
+		NextServiceDue         *string  `json:"next_service_due,omitempty"`
+		DamagesOrIssues        *string  `json:"damages_or_issues,omitempty"`
 	} `json:"status,omitempty"`
 
 	// Owner Info
@@ -151,21 +152,39 @@ func CreateCar(c *fiber.Ctx) error {
 		return utils.ValidationErrorResponse(c, "Validation failed", validationErrors)
 	}
 
-	// Validate owner exists
-	var owner models.User
-	if result := database.DB.First(&owner, "id = ?", req.Owner.OwnerID); result.Error != nil {
-		return utils.ValidationErrorResponse(c, "Invalid owner", []string{
-			"Owner with ID " + req.Owner.OwnerID.String() + " does not exist",
+	// Parse date strings
+	insuranceExpiryDate, err := time.Parse("2006-01-02", req.Documentation.InsuranceExpiryDate)
+	if err != nil {
+		return utils.ValidationErrorResponse(c, "Invalid date format", []string{
+			"Invalid insurance expiry date. Format should be YYYY-MM-DD",
 		})
 	}
 
-	// Check if vehicle number already exists
-	var existingCar models.Car
-	if result := database.DB.Where("vehicle_number = ?", req.VehicleNumber).First(&existingCar); result.Error == nil {
-		return utils.ConflictResponse(c, "Vehicle number already exists")
+	pollutionCertValidity, err := time.Parse("2006-01-02", req.Documentation.PollutionCertValidity)
+	if err != nil {
+		return utils.ValidationErrorResponse(c, "Invalid date format", []string{
+			"Invalid pollution certificate validity. Format should be YYYY-MM-DD",
+		})
 	}
 
-	car := models.Car{
+	lastServiceDate, err := time.Parse("2006-01-02", req.Status.LastServiceDate)
+	if err != nil {
+		return utils.ValidationErrorResponse(c, "Invalid date format", []string{
+			"Invalid last service date. Format should be YYYY-MM-DD",
+		})
+	}
+
+	nextServiceDue, err := time.Parse("2006-01-02", req.Status.NextServiceDue)
+	if err != nil {
+		return utils.ValidationErrorResponse(c, "Invalid date format", []string{
+			"Invalid next service due date. Format should be YYYY-MM-DD",
+		})
+	}
+
+	carService := services.NewCarService()
+
+	// Create the car and related entities in a transaction
+	car := &models.Car{
 		Make:              req.Make,
 		Model:             req.Model,
 		Year:              req.Year,
@@ -177,58 +196,119 @@ func CreateCar(c *fiber.Ctx) error {
 		SeatingCapacity:   req.SeatingCapacity,
 		VehicleNumber:     req.VehicleNumber,
 		RegistrationState: req.RegistrationState,
-		Location: models.CarLocation{
-			CurrentLocation:   req.Location.CurrentLocation,
-			AvailableBranches: req.Location.AvailableBranches,
-		},
-		RentalInfo: models.CarRentalInfo{
-			RentalPricePerDay:   req.RentalInfo.RentalPricePerDay,
-			RentalPricePerHour:  req.RentalInfo.RentalPricePerHour,
-			MinimumRentDuration: req.RentalInfo.MinimumRentDuration,
-			MaximumRentDuration: req.RentalInfo.MaximumRentDuration,
-			SecurityDeposit:     req.RentalInfo.SecurityDeposit,
-			LateFeePerHour:      req.RentalInfo.LateFeePerHour,
-			Discounts:           req.RentalInfo.Discounts,
-		},
-		Media: models.CarMedia{
-			Images: req.Media.Images,
-			Video:  req.Media.Video,
-		},
-		Documentation: models.CarDocumentation{
-			InsuranceExpiryDate:     req.Documentation.InsuranceExpiryDate,
-			PollutionCertValidity:   req.Documentation.PollutionCertValidity,
-			RegistrationCertificate: req.Documentation.RegistrationCertificate,
-			FitnessCertificate:      req.Documentation.FitnessCertificate,
-			PermitType:              models.PermitType(req.Documentation.PermitType),
-		},
-		Status: models.CarStatus{
-			IsAvailable:            req.Status.IsAvailable,
-			CurrentOdometerReading: req.Status.CurrentOdometerReading,
-			LastServiceDate:        req.Status.LastServiceDate,
-			NextServiceDue:         req.Status.NextServiceDue,
-			DamagesOrIssues:        req.Status.DamagesOrIssues,
-		},
-		Owner: models.OwnerInfo{
-			OwnerID:     req.Owner.OwnerID,
-			OwnerName:   req.Owner.OwnerName,
-			ContactInfo: req.Owner.ContactInfo,
-		},
 	}
 
-	if result := database.DB.Create(&car); result.Error != nil {
-		return utils.ServerErrorResponse(c, "Failed to create car: "+result.Error.Error())
+	owner := &models.Owner{
+		Name:        req.Owner.OwnerName,
+		ContactInfo: req.Owner.ContactInfo,
+	}
+	if req.Owner.OwnerID != nil {
+		owner.ID = *req.Owner.OwnerID
 	}
 
-	return utils.SuccessResponse(c, car, "Car created successfully")
+	location := &models.CarLocation{
+		CurrentLocation:   req.Location.CurrentLocation,
+		AvailableBranches: req.Location.AvailableBranches,
+	}
+
+	rentalInfo := &models.CarRentalInfo{
+		RentalPricePerDay:   req.RentalInfo.RentalPricePerDay,
+		RentalPricePerHour:  req.RentalInfo.RentalPricePerHour,
+		MinimumRentDuration: req.RentalInfo.MinimumRentDuration,
+		MaximumRentDuration: req.RentalInfo.MaximumRentDuration,
+		SecurityDeposit:     req.RentalInfo.SecurityDeposit,
+		LateFeePerHour:      req.RentalInfo.LateFeePerHour,
+		Discounts:           req.RentalInfo.Discounts,
+	}
+
+	status := &models.CarStatus{
+		IsAvailable:            req.Status.IsAvailable,
+		CurrentOdometerReading: req.Status.CurrentOdometerReading,
+		LastServiceDate:        lastServiceDate,
+		NextServiceDue:         nextServiceDue,
+		DamagesOrIssues:        req.Status.DamagesOrIssues,
+	}
+
+	// Create media entries
+	var mediaEntries []models.CarMedia
+	for i, imgURL := range req.Media.Images {
+		mediaEntry := models.CarMedia{
+			Type:      "image",
+			URL:       imgURL,
+			IsPrimary: i == 0, // First image is primary
+		}
+		mediaEntries = append(mediaEntries, mediaEntry)
+	}
+
+	if req.Media.Video != nil {
+		mediaEntry := models.CarMedia{
+			Type: "video",
+			URL:  *req.Media.Video,
+		}
+		mediaEntries = append(mediaEntries, mediaEntry)
+	}
+
+	// Create document entries
+	insuranceDoc := models.CarDocument{
+		DocumentType: "insurance",
+		ExpiryDate:   &insuranceExpiryDate,
+		DocumentPath: "insurance_cert_" + req.VehicleNumber,
+		PermitType:   models.PermitType(req.Documentation.PermitType),
+	}
+
+	pollutionDoc := models.CarDocument{
+		DocumentType: "pollution",
+		ExpiryDate:   &pollutionCertValidity,
+		DocumentPath: req.Documentation.PollutionCertValidity,
+		PermitType:   models.PermitType(req.Documentation.PermitType),
+	}
+
+	registrationDoc := models.CarDocument{
+		DocumentType: "registration",
+		DocumentPath: req.Documentation.RegistrationCertificate,
+		PermitType:   models.PermitType(req.Documentation.PermitType),
+	}
+
+	fitnessDoc := models.CarDocument{
+		DocumentType: "fitness",
+		DocumentPath: req.Documentation.FitnessCertificate,
+		PermitType:   models.PermitType(req.Documentation.PermitType),
+	}
+
+	documents := []models.CarDocument{
+		insuranceDoc,
+		pollutionDoc,
+		registrationDoc,
+		fitnessDoc,
+	}
+
+	// Create the car with all related entities in a transaction
+	createdCar, err := carService.CreateCar(car, owner, location, rentalInfo, mediaEntries, documents, status)
+	if err != nil {
+		return utils.ServerErrorResponse(c, "Failed to create car: "+err.Error())
+	}
+
+	// Convert to response format
+	response := createdCar.ToCarResponse()
+
+	return utils.SuccessResponse(c, response, "Car created successfully")
 }
 
 func GetCars(c *fiber.Ctx) error {
-	var cars []models.Car
-	if result := database.DB.Find(&cars); result.Error != nil {
-		return utils.ServerErrorResponse(c, "Failed to fetch cars")
+	carService := services.NewCarService()
+
+	cars, err := carService.GetAllCars()
+	if err != nil {
+		return utils.ServerErrorResponse(c, "Failed to fetch cars: "+err.Error())
 	}
 
-	return utils.SuccessResponse(c, cars, "Cars fetched successfully")
+	// Convert cars to response format
+	var responses []models.CarResponse
+	for _, car := range cars {
+		responses = append(responses, car.ToCarResponse())
+	}
+
+	return utils.SuccessResponse(c, responses, "Cars fetched successfully")
 }
 
 func GetCar(c *fiber.Ctx) error {
@@ -238,12 +318,16 @@ func GetCar(c *fiber.Ctx) error {
 		return utils.ValidationErrorResponse(c, "Invalid car ID", []string{"Invalid UUID format"})
 	}
 
-	var car models.Car
-	if result := database.DB.First(&car, "id = ?", carID); result.Error != nil {
+	carService := services.NewCarService()
+	car, err := carService.GetCarByID(carID)
+	if err != nil {
 		return utils.NotFoundResponse(c, "Car not found")
 	}
 
-	return utils.SuccessResponse(c, car, "Car fetched successfully")
+	// Convert to response format
+	response := car.ToCarResponse()
+
+	return utils.SuccessResponse(c, response, "Car fetched successfully")
 }
 
 func UpdateCar(c *fiber.Ctx) error {
@@ -253,152 +337,236 @@ func UpdateCar(c *fiber.Ctx) error {
 		return utils.ValidationErrorResponse(c, "Invalid car ID", []string{"Invalid UUID format"})
 	}
 
-	var car models.Car
-	if result := database.DB.First(&car, "id = ?", carID); result.Error != nil {
+	carService := services.NewCarService()
+
+	// Check if car exists
+	existingCar, err := carService.GetCarByID(carID)
+	if err != nil {
 		return utils.NotFoundResponse(c, "Car not found")
 	}
 
 	var req UpdateCarRequest
 	if err := c.BodyParser(&req); err != nil {
-		return utils.ValidationErrorResponse(c, "Invalid request body", []string{"Failed to parse request body"})
+		return utils.ValidationErrorResponse(c, "Invalid request body", []string{
+			"Failed to parse request body: " + err.Error(),
+		})
 	}
 
-	// Update basic car details
+	// Validate request
+	if validationErrors := utils.ValidateStruct(req); len(validationErrors) > 0 {
+		return utils.ValidationErrorResponse(c, "Validation failed", validationErrors)
+	}
+
+	// Prepare update maps for different entities
+	carUpdates := make(map[string]interface{})
+	locationUpdates := make(map[string]interface{})
+	rentalInfoUpdates := make(map[string]interface{})
+	statusUpdates := make(map[string]interface{})
+
+	// Basic car details
 	if req.Make != nil {
-		car.Make = *req.Make
+		carUpdates["make"] = *req.Make
 	}
 	if req.Model != nil {
-		car.Model = *req.Model
+		carUpdates["model"] = *req.Model
 	}
 	if req.Year != nil {
-		car.Year = *req.Year
+		carUpdates["year"] = *req.Year
 	}
 	if req.Variant != nil {
-		car.Variant = *req.Variant
+		carUpdates["variant"] = *req.Variant
 	}
 	if req.FuelType != nil {
-		car.FuelType = models.FuelType(*req.FuelType)
+		carUpdates["fuel_type"] = *req.FuelType
 	}
 	if req.Transmission != nil {
-		car.Transmission = models.TransmissionType(*req.Transmission)
+		carUpdates["transmission"] = *req.Transmission
 	}
 	if req.BodyType != nil {
-		car.BodyType = models.BodyType(*req.BodyType)
+		carUpdates["body_type"] = *req.BodyType
 	}
 	if req.Color != nil {
-		car.Color = *req.Color
+		carUpdates["color"] = *req.Color
 	}
 	if req.SeatingCapacity != nil {
-		car.SeatingCapacity = *req.SeatingCapacity
+		carUpdates["seating_capacity"] = *req.SeatingCapacity
 	}
 	if req.VehicleNumber != nil {
-		car.VehicleNumber = *req.VehicleNumber
+		carUpdates["vehicle_number"] = *req.VehicleNumber
 	}
 	if req.RegistrationState != nil {
-		car.RegistrationState = *req.RegistrationState
+		carUpdates["registration_state"] = *req.RegistrationState
 	}
 
-	// Update location
+	// Location info
 	if req.Location != nil {
 		if req.Location.CurrentLocation != nil {
-			car.Location.CurrentLocation = *req.Location.CurrentLocation
+			locationUpdates["current_location"] = *req.Location.CurrentLocation
 		}
-		if req.Location.AvailableBranches != nil {
-			car.Location.AvailableBranches = req.Location.AvailableBranches
+		if len(req.Location.AvailableBranches) > 0 {
+			locationUpdates["available_branches"] = req.Location.AvailableBranches
 		}
 	}
 
-	// Update rental info
+	// Rental info
 	if req.RentalInfo != nil {
 		if req.RentalInfo.RentalPricePerDay != nil {
-			car.RentalInfo.RentalPricePerDay = *req.RentalInfo.RentalPricePerDay
+			rentalInfoUpdates["rental_price_per_day"] = *req.RentalInfo.RentalPricePerDay
 		}
 		if req.RentalInfo.RentalPricePerHour != nil {
-			car.RentalInfo.RentalPricePerHour = req.RentalInfo.RentalPricePerHour
+			rentalInfoUpdates["rental_price_per_hour"] = *req.RentalInfo.RentalPricePerHour
 		}
 		if req.RentalInfo.MinimumRentDuration != nil {
-			car.RentalInfo.MinimumRentDuration = *req.RentalInfo.MinimumRentDuration
+			rentalInfoUpdates["minimum_rent_duration"] = *req.RentalInfo.MinimumRentDuration
 		}
 		if req.RentalInfo.MaximumRentDuration != nil {
-			car.RentalInfo.MaximumRentDuration = *req.RentalInfo.MaximumRentDuration
+			rentalInfoUpdates["maximum_rent_duration"] = *req.RentalInfo.MaximumRentDuration
 		}
 		if req.RentalInfo.SecurityDeposit != nil {
-			car.RentalInfo.SecurityDeposit = *req.RentalInfo.SecurityDeposit
+			rentalInfoUpdates["security_deposit"] = *req.RentalInfo.SecurityDeposit
 		}
 		if req.RentalInfo.LateFeePerHour != nil {
-			car.RentalInfo.LateFeePerHour = *req.RentalInfo.LateFeePerHour
+			rentalInfoUpdates["late_fee_per_hour"] = *req.RentalInfo.LateFeePerHour
 		}
 		if req.RentalInfo.Discounts != nil {
-			car.RentalInfo.Discounts = req.RentalInfo.Discounts
+			rentalInfoUpdates["discounts"] = *req.RentalInfo.Discounts
 		}
 	}
 
-	// Update media
+	// Media handling
 	if req.Media != nil {
-		if req.Media.Images != nil {
-			car.Media.Images = req.Media.Images
+		// Add new images
+		if len(req.Media.AddImages) > 0 {
+			for _, imageURL := range req.Media.AddImages {
+				err := carService.AddCarMedia(carID, "image", imageURL, false)
+				if err != nil {
+					return utils.ServerErrorResponse(c, "Failed to add image: "+err.Error())
+				}
+			}
 		}
+
+		// Remove images
+		if len(req.Media.RemoveImages) > 0 {
+			for _, imageURL := range req.Media.RemoveImages {
+				// Find the media ID from the URL
+				for _, media := range existingCar.Media {
+					if media.URL == imageURL && media.Type == "image" {
+						err := carService.RemoveCarMedia(media.ID)
+						if err != nil {
+							return utils.ServerErrorResponse(c, "Failed to remove image: "+err.Error())
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// Update video
 		if req.Media.Video != nil {
-			car.Media.Video = req.Media.Video
+			// Check if car already has a video
+			for _, media := range existingCar.Media {
+				if media.Type == "video" {
+					// Update existing video
+					err := carService.RemoveCarMedia(media.ID)
+					if err != nil {
+						return utils.ServerErrorResponse(c, "Failed to remove old video: "+err.Error())
+					}
+					break
+				}
+			}
+
+			// Add new video
+			err := carService.AddCarMedia(carID, "video", *req.Media.Video, false)
+			if err != nil {
+				return utils.ServerErrorResponse(c, "Failed to add video: "+err.Error())
+			}
 		}
 	}
 
-	// Update documentation
+	// Documentation updates
 	if req.Documentation != nil {
-		if req.Documentation.InsuranceExpiryDate != nil {
-			car.Documentation.InsuranceExpiryDate = *req.Documentation.InsuranceExpiryDate
-		}
-		if req.Documentation.PollutionCertValidity != nil {
-			car.Documentation.PollutionCertValidity = *req.Documentation.PollutionCertValidity
-		}
-		if req.Documentation.RegistrationCertificate != nil {
-			car.Documentation.RegistrationCertificate = *req.Documentation.RegistrationCertificate
-		}
-		if req.Documentation.FitnessCertificate != nil {
-			car.Documentation.FitnessCertificate = *req.Documentation.FitnessCertificate
-		}
-		if req.Documentation.PermitType != nil {
-			car.Documentation.PermitType = models.PermitType(*req.Documentation.PermitType)
+		// Update document expiry dates and paths as needed
+		for _, doc := range existingCar.Documents {
+			if req.Documentation.InsuranceExpiryDate != nil && doc.DocumentType == "insurance" {
+				// Parse the date
+				expiryDate, err := time.Parse("2006-01-02", *req.Documentation.InsuranceExpiryDate)
+				if err != nil {
+					return utils.ValidationErrorResponse(c, "Invalid date format", []string{
+						"Invalid insurance expiry date. Format should be YYYY-MM-DD",
+					})
+				}
+				err = carService.UpdateDocumentExpiry(doc.ID, expiryDate)
+				if err != nil {
+					return utils.ServerErrorResponse(c, "Failed to update insurance expiry: "+err.Error())
+				}
+			}
+
+			if req.Documentation.PollutionCertValidity != nil && doc.DocumentType == "pollution" {
+				// Parse the date
+				expiryDate, err := time.Parse("2006-01-02", *req.Documentation.PollutionCertValidity)
+				if err != nil {
+					return utils.ValidationErrorResponse(c, "Invalid date format", []string{
+						"Invalid pollution certificate validity. Format should be YYYY-MM-DD",
+					})
+				}
+				err = carService.UpdateDocumentExpiry(doc.ID, expiryDate)
+				if err != nil {
+					return utils.ServerErrorResponse(c, "Failed to update pollution certificate validity: "+err.Error())
+				}
+			}
+
+			// You can handle other document updates similarly
 		}
 	}
 
-	// Update status
+	// Status info
 	if req.Status != nil {
 		if req.Status.IsAvailable != nil {
-			car.Status.IsAvailable = *req.Status.IsAvailable
+			statusUpdates["is_available"] = *req.Status.IsAvailable
 		}
 		if req.Status.CurrentOdometerReading != nil {
-			car.Status.CurrentOdometerReading = *req.Status.CurrentOdometerReading
+			statusUpdates["current_odometer_reading"] = *req.Status.CurrentOdometerReading
 		}
 		if req.Status.LastServiceDate != nil {
-			car.Status.LastServiceDate = *req.Status.LastServiceDate
+			// Parse the date
+			lastServiceDate, err := time.Parse("2006-01-02", *req.Status.LastServiceDate)
+			if err != nil {
+				return utils.ValidationErrorResponse(c, "Invalid date format", []string{
+					"Invalid last service date. Format should be YYYY-MM-DD",
+				})
+			}
+			statusUpdates["last_service_date"] = lastServiceDate
 		}
 		if req.Status.NextServiceDue != nil {
-			car.Status.NextServiceDue = *req.Status.NextServiceDue
+			// Parse the date
+			nextServiceDue, err := time.Parse("2006-01-02", *req.Status.NextServiceDue)
+			if err != nil {
+				return utils.ValidationErrorResponse(c, "Invalid date format", []string{
+					"Invalid next service due date. Format should be YYYY-MM-DD",
+				})
+			}
+			statusUpdates["next_service_due"] = nextServiceDue
 		}
 		if req.Status.DamagesOrIssues != nil {
-			car.Status.DamagesOrIssues = req.Status.DamagesOrIssues
+			statusUpdates["damages_or_issues"] = *req.Status.DamagesOrIssues
 		}
 	}
 
-	// Update owner info
-	if req.Owner != nil {
-		if req.Owner.OwnerID != nil {
-			car.Owner.OwnerID = *req.Owner.OwnerID
-		}
-		if req.Owner.OwnerName != nil {
-			car.Owner.OwnerName = *req.Owner.OwnerName
-		}
-		if req.Owner.ContactInfo != nil {
-			car.Owner.ContactInfo = *req.Owner.ContactInfo
-		}
+	// Owner info
+	if req.Owner != nil && req.Owner.OwnerID != nil {
+		carUpdates["owner_id"] = *req.Owner.OwnerID
 	}
 
-	if result := database.DB.Save(&car); result.Error != nil {
-		return utils.ServerErrorResponse(c, "Failed to update car")
+	// Update the car and related entities
+	updatedCar, err := carService.UpdateCar(carID, carUpdates, locationUpdates, rentalInfoUpdates, statusUpdates)
+	if err != nil {
+		return utils.ServerErrorResponse(c, "Failed to update car: "+err.Error())
 	}
 
-	return utils.SuccessResponse(c, car, "Car updated successfully")
+	// Convert to response format
+	response := updatedCar.ToCarResponse()
+
+	return utils.SuccessResponse(c, response, "Car updated successfully")
 }
 
 func DeleteCar(c *fiber.Ctx) error {
@@ -408,8 +576,10 @@ func DeleteCar(c *fiber.Ctx) error {
 		return utils.ValidationErrorResponse(c, "Invalid car ID", []string{"Invalid UUID format"})
 	}
 
-	if result := database.DB.Delete(&models.Car{}, "id = ?", carID); result.Error != nil {
-		return utils.ServerErrorResponse(c, "Failed to delete car")
+	carService := services.NewCarService()
+	err = carService.DeleteCar(carID)
+	if err != nil {
+		return utils.ServerErrorResponse(c, "Failed to delete car: "+err.Error())
 	}
 
 	return utils.SuccessResponse(c, nil, "Car deleted successfully")
@@ -420,9 +590,23 @@ func GetAvailableCars(c *fiber.Ctx) error {
 	endTime := c.Query("end")
 
 	if startTime == "" || endTime == "" {
-		return utils.ValidationErrorResponse(c, "Start and end times are required", []string{"Missing required query parameters"})
+		// If no time range specified, just get all available cars
+		carService := services.NewCarService()
+		availableCars, err := carService.GetAvailableCars()
+		if err != nil {
+			return utils.ServerErrorResponse(c, "Failed to fetch available cars: "+err.Error())
+		}
+
+		// Convert to response format
+		var responses []models.CarResponse
+		for _, car := range availableCars {
+			responses = append(responses, car.ToCarResponse())
+		}
+
+		return utils.SuccessResponse(c, responses, "Available cars fetched successfully")
 	}
 
+	// Parse time range for booking availability check
 	start, err := time.Parse(time.RFC3339, startTime)
 	if err != nil {
 		return utils.ValidationErrorResponse(c, "Invalid start time format", []string{"Start time must be in RFC3339 format"})
@@ -437,14 +621,36 @@ func GetAvailableCars(c *fiber.Ctx) error {
 		return utils.ValidationErrorResponse(c, "End time must be after start time", []string{"Invalid time range"})
 	}
 
-	var cars []models.Car
-	query := database.DB.Where("status->>'is_available' = ?", "true").
-		Where("id NOT IN (SELECT car_id FROM bookings WHERE status = ? AND start_time < ? AND end_time > ?)",
-			models.BookingStatusBooked, end, start)
-
-	if result := query.Find(&cars); result.Error != nil {
-		return utils.ServerErrorResponse(c, "Failed to fetch available cars")
+	// Use a custom query to find cars available for booking in the specified time range
+	carService := services.NewCarService()
+	isAvailable := true
+	cars, err := carService.SearchCars("", "", "", &isAvailable, nil, nil)
+	if err != nil {
+		return utils.ServerErrorResponse(c, "Failed to fetch available cars: "+err.Error())
 	}
 
-	return utils.SuccessResponse(c, cars, "Available cars fetched successfully")
+	// Filter out cars that have bookings in the requested time range
+	var availableCars []models.Car
+	for _, car := range cars {
+		carIsAvailable := true
+		for _, booking := range car.Bookings {
+			// Check if booking overlaps with requested time range
+			if booking.Status == models.BookingStatusBooked &&
+				!(booking.EndTime.Before(start) || booking.StartTime.After(end)) {
+				carIsAvailable = false
+				break
+			}
+		}
+		if carIsAvailable {
+			availableCars = append(availableCars, car)
+		}
+	}
+
+	// Convert to response format
+	var responses []models.CarResponse
+	for _, car := range availableCars {
+		responses = append(responses, car.ToCarResponse())
+	}
+
+	return utils.SuccessResponse(c, responses, "Available cars fetched successfully")
 }
