@@ -4,6 +4,10 @@ import '../services/api_service.dart';
 import '../../features/auth/bloc/auth_bloc.dart';
 import '../../features/cars/bloc/car_bloc.dart';
 import '../../features/cars/repositories/car_repository.dart';
+import '../../features/bookings/repositories/booking_repository.dart';
+import '../../features/bookings/bloc/booking_bloc.dart';
+import '../../features/owners/repositories/owner_repository.dart';
+import '../../features/owners/bloc/owner_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -24,6 +28,14 @@ Future<void> init() async {
       baseUrl: ApiService.baseUrl,
     ),
   );
+  
+  getIt.registerLazySingleton(
+    () => BookingRepository(getIt()),
+  );
+  
+  getIt.registerLazySingleton(
+    () => OwnerRepository(getIt()),
+  );
 
   // Blocs
   getIt.registerFactory(
@@ -35,5 +47,13 @@ Future<void> init() async {
 
   getIt.registerFactory(
     () => CarBloc(carRepository: getIt()),
+  );
+  
+  getIt.registerFactory(
+    () => BookingBloc(getIt()),
+  );
+  
+  getIt.registerFactory(
+    () => OwnerBloc(getIt()),
   );
 } 

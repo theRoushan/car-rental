@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../auth/bloc/auth_bloc.dart';
+import '../../auth/bloc/auth_event.dart';
 import '../../cars/bloc/car_bloc.dart';
 import '../../cars/bloc/car_event.dart';
-import '../../cars/bloc/car_state.dart';
 import '../../cars/screens/car_list_screen.dart';
+import '../../bookings/bloc/booking_bloc.dart';
+import '../../bookings/bloc/booking_event.dart';
+import '../../bookings/screens/booking_list_screen.dart';
+import '../../owners/bloc/owner_bloc.dart';
+import '../../owners/bloc/owner_event.dart';
+import '../../owners/screens/owner_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,7 +25,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _loadInitialData();
+  }
+
+  void _loadInitialData() {
     context.read<CarBloc>().add(LoadCars());
+    context.read<BookingBloc>().add(const LoadBookings());
+    context.read<OwnerBloc>().add(const LoadOwners());
   }
 
   @override
@@ -30,7 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
-              // TODO: Implement logout
+              context.read<AuthBloc>().add(LogoutRequested());
             },
           ),
         ],
@@ -39,8 +52,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         index: _selectedIndex,
         children: const [
           CarListScreen(),
-          Center(child: Text('Bookings')),
-          Center(child: Text('Users')),
+          BookingListScreen(),
+          OwnerListScreen(),
           Center(child: Text('Settings')),
         ],
       ),
@@ -62,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           NavigationDestination(
             icon: Icon(Icons.people),
-            label: 'Users',
+            label: 'Owners',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings),

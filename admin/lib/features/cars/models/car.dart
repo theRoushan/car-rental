@@ -1,92 +1,263 @@
 import 'package:equatable/equatable.dart';
 
+enum FuelType {
+  petrol,
+  diesel,
+  electric,
+  hybrid
+}
+
+enum TransmissionType {
+  manual,
+  automatic,
+  cvt
+}
+
+enum BodyType {
+  sedan,
+  suv,
+  hatchback,
+  coupe,
+  van,
+  truck
+}
+
 class Car extends Equatable {
   final String id;
-  final String name;
+  final String make;
   final String model;
-  final String licensePlate;
-  final String location;
-  final double hourlyRate;
+  final int year;
+  final String variant;
+  final FuelType fuelType;
+  final TransmissionType transmission;
+  final BodyType bodyType;
+  final String color;
+  final int seatingCapacity;
+  final String vehicleNumber;
+  final String registrationState;
+  
+  // Owner info
+  final String ownerId;
+  final String? ownerName;
+  final String? ownerContact;
+  
+  // Location
+  final String? currentLocation;
+  final List<String>? availableBranches;
+  
+  // Rental info
+  final double? rentalPricePerDay;
+  final double? rentalPricePerHour;
+  final int? minimumRentDuration;
+  final int? maximumRentDuration;
+  final double? securityDeposit;
+  final double? lateFeePerHour;
+  final String? discounts;
+  
+  // Media
+  final List<String>? images;
+  final String? video;
+  
+  // Status
   final bool isAvailable;
-  final DateTime createdAt;
-  final DateTime? updatedAt;
+  final double? currentOdometerReading;
+  final String? lastServiceDate;
+  final String? nextServiceDue;
+  final String? damagesOrIssues;
+  
+  final String createdAt;
+  final String updatedAt;
 
   const Car({
     required this.id,
-    required this.name,
+    required this.make,
     required this.model,
-    required this.licensePlate,
-    required this.location,
-    required this.hourlyRate,
-    required this.isAvailable,
+    required this.year,
+    required this.variant,
+    required this.fuelType,
+    required this.transmission,
+    required this.bodyType,
+    required this.color,
+    required this.seatingCapacity,
+    required this.vehicleNumber,
+    required this.registrationState,
+    required this.ownerId,
+    this.ownerName,
+    this.ownerContact,
+    this.currentLocation,
+    this.availableBranches,
+    this.rentalPricePerDay,
+    this.rentalPricePerHour,
+    this.minimumRentDuration,
+    this.maximumRentDuration,
+    this.securityDeposit,
+    this.lateFeePerHour,
+    this.discounts,
+    this.images,
+    this.video,
+    this.isAvailable = true,
+    this.currentOdometerReading,
+    this.lastServiceDate,
+    this.nextServiceDue,
+    this.damagesOrIssues,
     required this.createdAt,
-    this.updatedAt,
+    required this.updatedAt,
   });
 
   factory Car.fromJson(Map<String, dynamic> json) {
     return Car(
       id: json['id'] as String,
-      name: json['name'] as String,
+      make: json['make'] as String,
       model: json['model'] as String,
-      licensePlate: json['license_plate'] as String,
-      location: json['location'] as String,
-      hourlyRate: (json['hourly_rate'] as num).toDouble(),
-      isAvailable: json['is_available'] as bool,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+      year: json['year'] as int,
+      variant: json['variant'] as String,
+      fuelType: _parseFuelType(json['fuel_type'] as String),
+      transmission: _parseTransmission(json['transmission'] as String),
+      bodyType: _parseBodyType(json['body_type'] as String),
+      color: json['color'] as String,
+      seatingCapacity: json['seating_capacity'] as int,
+      vehicleNumber: json['vehicle_number'] as String,
+      registrationState: json['registration_state'] as String,
+      ownerId: json['owner_id'] as String,
+      ownerName: json['owner_name'] as String?,
+      ownerContact: json['owner_contact'] as String?,
+      currentLocation: json['current_location'] as String?,
+      availableBranches: json['available_branches'] != null 
+          ? List<String>.from(json['available_branches'] as List)
           : null,
+      rentalPricePerDay: json['rental_price_per_day'] != null 
+          ? (json['rental_price_per_day'] as num).toDouble() 
+          : null,
+      rentalPricePerHour: json['rental_price_per_hour'] != null 
+          ? (json['rental_price_per_hour'] as num).toDouble() 
+          : null,
+      minimumRentDuration: json['minimum_rent_duration'] as int?,
+      maximumRentDuration: json['maximum_rent_duration'] as int?,
+      securityDeposit: json['security_deposit'] != null 
+          ? (json['security_deposit'] as num).toDouble() 
+          : null,
+      lateFeePerHour: json['late_fee_per_hour'] != null 
+          ? (json['late_fee_per_hour'] as num).toDouble() 
+          : null,
+      discounts: json['discounts'] as String?,
+      images: json['images'] != null 
+          ? List<String>.from(json['images'] as List) 
+          : null,
+      video: json['video'] as String?,
+      isAvailable: json['is_available'] as bool? ?? true,
+      currentOdometerReading: json['current_odometer_reading'] != null 
+          ? (json['current_odometer_reading'] as num).toDouble() 
+          : null,
+      lastServiceDate: json['last_service_date'] as String?,
+      nextServiceDue: json['next_service_due'] as String?,
+      damagesOrIssues: json['damages_or_issues'] as String?,
+      createdAt: json['created_at'] as String,
+      updatedAt: json['updated_at'] as String,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
+    final Map<String, dynamic> data = {
+      'make': make,
       'model': model,
-      'license_plate': licensePlate,
-      'location': location,
-      'hourly_rate': hourlyRate,
-      'is_available': isAvailable,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
+      'year': year,
+      'variant': variant,
+      'fuel_type': fuelType.toString().split('.').last.toUpperCase(),
+      'transmission': transmission.toString().split('.').last.toUpperCase(),
+      'body_type': bodyType.toString().split('.').last.toUpperCase(),
+      'color': color,
+      'seating_capacity': seatingCapacity,
+      'vehicle_number': vehicleNumber,
+      'registration_state': registrationState,
+      'owner_id': ownerId,
     };
+    
+    // Only include optional fields if they are not null
+    if (currentLocation != null) data['current_location'] = currentLocation;
+    if (availableBranches != null) data['available_branches'] = availableBranches;
+    if (rentalPricePerDay != null) data['rental_price_per_day'] = rentalPricePerDay;
+    if (rentalPricePerHour != null) data['rental_price_per_hour'] = rentalPricePerHour;
+    if (minimumRentDuration != null) data['minimum_rent_duration'] = minimumRentDuration;
+    if (maximumRentDuration != null) data['maximum_rent_duration'] = maximumRentDuration;
+    if (securityDeposit != null) data['security_deposit'] = securityDeposit;
+    if (lateFeePerHour != null) data['late_fee_per_hour'] = lateFeePerHour;
+    if (discounts != null) data['discounts'] = discounts;
+    if (images != null) data['images'] = images;
+    if (video != null) data['video'] = video;
+    data['is_available'] = isAvailable;
+    if (currentOdometerReading != null) data['current_odometer_reading'] = currentOdometerReading;
+    if (lastServiceDate != null) data['last_service_date'] = lastServiceDate;
+    if (nextServiceDue != null) data['next_service_date'] = nextServiceDue;
+    if (damagesOrIssues != null) data['damages_or_issues'] = damagesOrIssues;
+    
+    return data;
   }
 
-  Car copyWith({
-    String? id,
-    String? name,
-    String? model,
-    String? licensePlate,
-    String? location,
-    double? hourlyRate,
-    bool? isAvailable,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return Car(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      model: model ?? this.model,
-      licensePlate: licensePlate ?? this.licensePlate,
-      location: location ?? this.location,
-      hourlyRate: hourlyRate ?? this.hourlyRate,
-      isAvailable: isAvailable ?? this.isAvailable,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
+  static FuelType _parseFuelType(String value) {
+    switch (value.toLowerCase()) {
+      case 'petrol': return FuelType.petrol;
+      case 'diesel': return FuelType.diesel;
+      case 'electric': return FuelType.electric;
+      case 'hybrid': return FuelType.hybrid;
+      default: return FuelType.petrol;
+    }
+  }
+  
+  static TransmissionType _parseTransmission(String value) {
+    switch (value.toLowerCase()) {
+      case 'manual': return TransmissionType.manual;
+      case 'automatic': return TransmissionType.automatic;
+      case 'cvt': return TransmissionType.cvt;
+      default: return TransmissionType.manual;
+    }
+  }
+  
+  static BodyType _parseBodyType(String value) {
+    switch (value.toLowerCase()) {
+      case 'sedan': return BodyType.sedan;
+      case 'suv': return BodyType.suv;
+      case 'hatchback': return BodyType.hatchback;
+      case 'coupe': return BodyType.coupe;
+      case 'van': return BodyType.van;
+      case 'truck': return BodyType.truck;
+      default: return BodyType.sedan;
+    }
   }
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        model,
-        licensePlate,
-        location,
-        hourlyRate,
-        isAvailable,
-        createdAt,
-        updatedAt,
-      ];
+    id,
+    make,
+    model,
+    year,
+    variant,
+    fuelType,
+    transmission,
+    bodyType,
+    color,
+    seatingCapacity,
+    vehicleNumber,
+    registrationState,
+    ownerId,
+    ownerName,
+    ownerContact,
+    currentLocation,
+    availableBranches,
+    rentalPricePerDay,
+    rentalPricePerHour,
+    minimumRentDuration,
+    maximumRentDuration,
+    securityDeposit,
+    lateFeePerHour,
+    discounts,
+    images,
+    video,
+    isAvailable,
+    currentOdometerReading,
+    lastServiceDate,
+    nextServiceDue,
+    damagesOrIssues,
+    createdAt,
+    updatedAt,
+  ];
 }

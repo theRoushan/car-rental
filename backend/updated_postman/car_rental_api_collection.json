@@ -1,0 +1,599 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"name": "Car Rental API",
+		"description": "Complete API collection for the Car Rental backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"description": "Authentication endpoints",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"phone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user"
+					}
+				},
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"if (jsonData && jsonData.data && jsonData.data.token) {",
+									"    pm.environment.set(\"token\", jsonData.data.token);",
+									"    pm.environment.set(\"user_id\", jsonData.data.user.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login a user and get JWT token"
+					}
+				}
+			]
+		},
+		{
+			"name": "Cars",
+			"description": "Car management endpoints",
+			"item": [
+				{
+					"name": "Create Car",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"if (jsonData && jsonData.data && jsonData.data.id) {",
+									"    pm.environment.set(\"car_id\", jsonData.data.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"make\": \"Toyota\",\n    \"model\": \"Camry\",\n    \"year\": 2023,\n    \"variant\": \"XLE\",\n    \"fuel_type\": \"Petrol\",\n    \"transmission\": \"Automatic\",\n    \"body_type\": \"Sedan\",\n    \"color\": \"Silver\",\n    \"seating_capacity\": 5,\n    \"vehicle_number\": \"ABC123\",\n    \"registration_state\": \"California\",\n    \n    \"location\": {\n        \"current_location\": \"San Francisco\",\n        \"available_branches\": [\"San Francisco\", \"Los Angeles\", \"San Diego\"]\n    },\n    \n    \"rental_info\": {\n        \"rental_price_per_day\": 50.00,\n        \"rental_price_per_hour\": 10.00,\n        \"minimum_rent_duration\": 4,\n        \"maximum_rent_duration\": 720,\n        \"security_deposit\": 200.00,\n        \"late_fee_per_hour\": 15.00,\n        \"discounts\": \"10% for weekly rentals\"\n    },\n    \n    \"media\": {\n        \"images\": [\"https://example.com/car1.jpg\", \"https://example.com/car2.jpg\"],\n        \"video\": \"https://example.com/car-video.mp4\"\n    },\n    \n    \"documentation\": {\n        \"insurance_expiry_date\": \"2024-12-31T00:00:00Z\",\n        \"pollution_certificate_validity\": \"2024-12-31T00:00:00Z\",\n        \"registration_certificate\": \"https://example.com/reg-cert.pdf\",\n        \"fitness_certificate\": \"https://example.com/fitness-cert.pdf\",\n        \"permit_type\": \"Self-drive\"\n    },\n    \n    \"status\": {\n        \"is_available\": true,\n        \"current_odometer_reading\": 15000,\n        \"last_service_date\": \"2023-12-01T00:00:00Z\",\n        \"next_service_due\": \"2024-06-01T00:00:00Z\",\n        \"damages_or_issues\": \"Minor scratch on rear bumper\"\n    },\n    \n    \"owner\": {\n        \"owner_id\": \"{{owner_id}}\",\n        \"owner_name\": \"John Smith\",\n        \"contact_info\": \"+1234567890\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/cars",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cars"
+							]
+						},
+						"description": "Create a new car"
+					}
+				},
+				{
+					"name": "Get All Cars",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cars",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cars"
+							]
+						},
+						"description": "Get all cars"
+					}
+				},
+				{
+					"name": "Get Car by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cars/{{car_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"{{car_id}}"
+							]
+						},
+						"description": "Get a specific car by ID"
+					}
+				},
+				{
+					"name": "Update Car",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"make\": \"Toyota\",\n    \"model\": \"Camry\",\n    \"year\": 2023,\n    \"variant\": \"XLE\",\n    \"fuel_type\": \"Petrol\",\n    \"transmission\": \"Automatic\",\n    \"body_type\": \"Sedan\",\n    \"color\": \"Black\",\n    \"seating_capacity\": 5,\n    \"vehicle_number\": \"ABC123\",\n    \"registration_state\": \"California\",\n    \n    \"location\": {\n        \"current_location\": \"Los Angeles\",\n        \"available_branches\": [\"San Francisco\", \"Los Angeles\", \"San Diego\"]\n    },\n    \n    \"rental_info\": {\n        \"rental_price_per_day\": 55.00,\n        \"rental_price_per_hour\": 12.00,\n        \"minimum_rent_duration\": 4,\n        \"maximum_rent_duration\": 720,\n        \"security_deposit\": 200.00,\n        \"late_fee_per_hour\": 15.00,\n        \"discounts\": \"10% for weekly rentals\"\n    },\n    \n    \"media\": {\n        \"images\": [\"https://example.com/car1.jpg\", \"https://example.com/car2.jpg\"],\n        \"video\": \"https://example.com/car-video.mp4\"\n    },\n    \n    \"documentation\": {\n        \"insurance_expiry_date\": \"2024-12-31T00:00:00Z\",\n        \"pollution_certificate_validity\": \"2024-12-31T00:00:00Z\",\n        \"registration_certificate\": \"https://example.com/reg-cert.pdf\",\n        \"fitness_certificate\": \"https://example.com/fitness-cert.pdf\",\n        \"permit_type\": \"Self-drive\"\n    },\n    \n    \"status\": {\n        \"is_available\": true,\n        \"current_odometer_reading\": 15000,\n        \"last_service_date\": \"2023-12-01T00:00:00Z\",\n        \"next_service_due\": \"2024-06-01T00:00:00Z\",\n        \"damages_or_issues\": \"Minor scratch on rear bumper\"\n    },\n    \n    \"owner\": {\n        \"owner_id\": \"{{owner_id}}\",\n        \"owner_name\": \"John Smith\",\n        \"contact_info\": \"+1234567890\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/cars/{{car_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"{{car_id}}"
+							]
+						},
+						"description": "Update a car"
+					}
+				},
+				{
+					"name": "Delete Car",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cars/{{car_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"{{car_id}}"
+							]
+						},
+						"description": "Delete a car"
+					}
+				},
+				{
+					"name": "Get Available Cars",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cars/available",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cars",
+								"available"
+							]
+						},
+						"description": "Get all available cars"
+					}
+				}
+			]
+		},
+		{
+			"name": "Bookings",
+			"description": "Booking management endpoints",
+			"item": [
+				{
+					"name": "Create Booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"if (jsonData && jsonData.data && jsonData.data.id) {",
+									"    pm.environment.set(\"booking_id\", jsonData.data.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"car_id\": \"{{car_id}}\",\n    \"start_time\": \"2024-04-15T10:00:00Z\",\n    \"end_time\": \"2024-04-16T10:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/bookings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bookings"
+							]
+						},
+						"description": "Create a new booking"
+					}
+				},
+				{
+					"name": "Get Booking by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/bookings/{{booking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bookings",
+								"{{booking_id}}"
+							]
+						},
+						"description": "Get a specific booking by ID"
+					}
+				},
+				{
+					"name": "Cancel Booking",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/bookings/{{booking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bookings",
+								"{{booking_id}}"
+							]
+						},
+						"description": "Cancel a booking"
+					}
+				}
+			]
+		},
+		{
+			"name": "User Bookings",
+			"description": "User booking management endpoints",
+			"item": [
+				{
+					"name": "Get User Bookings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/{{user_id}}/bookings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{user_id}}",
+								"bookings"
+							]
+						},
+						"description": "Get all bookings for a specific user"
+					}
+				}
+			]
+		},
+		{
+			"name": "Owners",
+			"description": "Owner management endpoints",
+			"item": [
+				{
+					"name": "Create Owner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"if (jsonData && jsonData.data && jsonData.data.id) {",
+									"    pm.environment.set(\"owner_id\", jsonData.data.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Smith\",\n    \"contact_info\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/owners",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"owners"
+							]
+						},
+						"description": "Create a new owner"
+					}
+				},
+				{
+					"name": "Get All Owners",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/owners",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"owners"
+							]
+						},
+						"description": "Get all owners"
+					}
+				},
+				{
+					"name": "Get Owner by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/owners/{{owner_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"owners",
+								"{{owner_id}}"
+							]
+						},
+						"description": "Get a specific owner by ID with associated cars"
+					}
+				},
+				{
+					"name": "Update Owner",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Smith Updated\",\n    \"contact_info\": \"+9876543210\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/owners/{{owner_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"owners",
+								"{{owner_id}}"
+							]
+						},
+						"description": "Update an owner"
+					}
+				},
+				{
+					"name": "Delete Owner",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/owners/{{owner_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"owners",
+								"{{owner_id}}"
+							]
+						},
+						"description": "Delete an owner (only works if owner has no associated cars)"
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "car_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "booking_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "owner_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+} 

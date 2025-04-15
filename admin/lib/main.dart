@@ -6,6 +6,8 @@ import 'features/auth/bloc/auth_state.dart';
 import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/cars/bloc/car_bloc.dart';
+import 'features/bookings/bloc/booking_bloc.dart';
+import 'features/owners/bloc/owner_bloc.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 
 void main() async {
@@ -26,6 +28,12 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<CarBloc>(
           create: (_) => di.getIt<CarBloc>(),
+        ),
+        BlocProvider<BookingBloc>(
+          create: (_) => di.getIt<BookingBloc>(),
+        ),
+        BlocProvider<OwnerBloc>(
+          create: (_) => di.getIt<OwnerBloc>(),
         ),
       ],
       child: MaterialApp(
