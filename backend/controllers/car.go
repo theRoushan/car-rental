@@ -4,6 +4,7 @@ import (
 	"car-rental-backend/models"
 	"car-rental-backend/services"
 	"car-rental-backend/utils"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -68,9 +69,7 @@ type CreateCarRequest struct {
 
 	// Owner Info
 	Owner struct {
-		OwnerID     *uuid.UUID `json:"owner_id,omitempty"`
-		OwnerName   string     `json:"owner_name" validate:"required"`
-		ContactInfo string     `json:"contact_info" validate:"required"`
+		OwnerID uuid.UUID `json:"owner_id" validate:"required"`
 	} `json:"owner" validate:"required"`
 }
 
@@ -152,6 +151,18 @@ func CreateCar(c *fiber.Ctx) error {
 		return utils.ValidationErrorResponse(c, "Validation failed", validationErrors)
 	}
 
+	// Validate vehicle number format and check if it already exists
+	carService := services.NewCarService()
+	exists, err := carService.VehicleNumberExists(req.VehicleNumber)
+	if err != nil {
+		return utils.ServerErrorResponse(c, "Failed to validate vehicle number: "+err.Error())
+	}
+	if exists {
+		return utils.ValidationErrorResponse(c, "Duplicate vehicle number", []string{
+			"Vehicle number " + req.VehicleNumber + " is already registered in the system",
+		})
+	}
+
 	// Parse date strings
 	insuranceExpiryDate, err := time.Parse("2006-01-02", req.Documentation.InsuranceExpiryDate)
 	if err != nil {
@@ -181,9 +192,27 @@ func CreateCar(c *fiber.Ctx) error {
 		})
 	}
 
-	carService := services.NewCarService()
+	// Validate date logic
+	now := time.Now()
+	if insuranceExpiryDate.Before(now) {
+		return utils.ValidationErrorResponse(c, "Invalid expiry date", []string{
+			"Insurance expiry date cannot be in the past",
+		})
+	}
 
-	// Create the car and related entities in a transaction
+	if pollutionCertValidity.Before(now) {
+		return utils.ValidationErrorResponse(c, "Invalid expiry date", []string{
+			"Pollution certificate validity cannot be in the past",
+		})
+	}
+
+	if nextServiceDue.Before(lastServiceDate) {
+		return utils.ValidationErrorResponse(c, "Invalid service dates", []string{
+			"Next service due date must be after last service date",
+		})
+	}
+
+	// Create the car with basic details
 	car := &models.Car{
 		Make:              req.Make,
 		Model:             req.Model,
@@ -196,21 +225,37 @@ func CreateCar(c *fiber.Ctx) error {
 		SeatingCapacity:   req.SeatingCapacity,
 		VehicleNumber:     req.VehicleNumber,
 		RegistrationState: req.RegistrationState,
+		OwnerID:           req.Owner.OwnerID,
 	}
 
-	owner := &models.Owner{
-		Name:        req.Owner.OwnerName,
-		ContactInfo: req.Owner.ContactInfo,
+	// Verify that the owner exists
+	ownerExists, err := carService.OwnerExists(req.Owner.OwnerID)
+	if err != nil {
+		return utils.ServerErrorResponse(c, "Failed to validate owner: "+err.Error())
 	}
-	if req.Owner.OwnerID != nil {
-		owner.ID = *req.Owner.OwnerID
+	if !ownerExists {
+		return utils.ValidationErrorResponse(c, "Invalid owner", []string{
+			"The specified owner ID does not exist",
+		})
 	}
 
+	// Validate location
+	if len(req.Location.AvailableBranches) == 0 {
+		return utils.ValidationErrorResponse(c, "Invalid location", []string{
+			"At least one available branch must be specified",
+		})
+	}
 	location := &models.CarLocation{
 		CurrentLocation:   req.Location.CurrentLocation,
 		AvailableBranches: req.Location.AvailableBranches,
 	}
 
+	// Validate rental info
+	if req.RentalInfo.MaximumRentDuration < req.RentalInfo.MinimumRentDuration {
+		return utils.ValidationErrorResponse(c, "Invalid rental duration", []string{
+			"Maximum rent duration must be greater than or equal to minimum rent duration",
+		})
+	}
 	rentalInfo := &models.CarRentalInfo{
 		RentalPricePerDay:   req.RentalInfo.RentalPricePerDay,
 		RentalPricePerHour:  req.RentalInfo.RentalPricePerHour,
@@ -229,9 +274,22 @@ func CreateCar(c *fiber.Ctx) error {
 		DamagesOrIssues:        req.Status.DamagesOrIssues,
 	}
 
+	// Validate media
+	if len(req.Media.Images) == 0 {
+		return utils.ValidationErrorResponse(c, "Invalid media", []string{
+			"At least one image must be provided",
+		})
+	}
+
 	// Create media entries
 	var mediaEntries []models.CarMedia
 	for i, imgURL := range req.Media.Images {
+		// Validate image URL format
+		if !utils.IsValidURL(imgURL) {
+			return utils.ValidationErrorResponse(c, "Invalid image URL", []string{
+				fmt.Sprintf("Image URL at position %d is not a valid URL", i),
+			})
+		}
 		mediaEntry := models.CarMedia{
 			Type:      "image",
 			URL:       imgURL,
@@ -241,6 +299,12 @@ func CreateCar(c *fiber.Ctx) error {
 	}
 
 	if req.Media.Video != nil {
+		// Validate video URL format
+		if !utils.IsValidURL(*req.Media.Video) {
+			return utils.ValidationErrorResponse(c, "Invalid video URL", []string{
+				"Video URL is not a valid URL",
+			})
+		}
 		mediaEntry := models.CarMedia{
 			Type: "video",
 			URL:  *req.Media.Video,
@@ -283,9 +347,11 @@ func CreateCar(c *fiber.Ctx) error {
 	}
 
 	// Create the car with all related entities in a transaction
-	createdCar, err := carService.CreateCar(car, owner, location, rentalInfo, mediaEntries, documents, status)
+	// Notice we're not passing owner anymore as we already have owner_id in car struct
+	createdCar, err := carService.CreateCarWithOwnerID(car, req.Owner.OwnerID, location, rentalInfo, mediaEntries, documents, status)
 	if err != nil {
-		return utils.ServerErrorResponse(c, "Failed to create car: "+err.Error())
+		// Use the database error handler for better error responses
+		return utils.HandleDatabaseError(c, err)
 	}
 
 	// Convert to response format

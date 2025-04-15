@@ -41,4 +41,12 @@ func SetupRoutes(app *fiber.App, cfg *config.Config) {
 	// User bookings
 	users := api.Group("/users")
 	users.Get("/:userId/bookings", controllers.GetUserBookings)
+
+	// Owner routes - TO BE IMPLEMENTED
+	owners := api.Group("/owners")
+	owners.Get("/", controllers.GetOwners)
+	owners.Get("/:id", controllers.GetOwner)
+	owners.Post("/", controllers.CreateOwner)
+	owners.Put("/:id", controllers.UpdateOwner)
+	owners.Delete("/:id", controllers.DeleteOwner)
 }

@@ -30,7 +30,7 @@ func Register(c *fiber.Ctx) error {
 	// Check if user already exists
 	var existingUser models.User
 	if result := database.DB.Where("email = ?", req.Email).First(&existingUser); result.Error == nil {
-		return utils.ConflictResponse(c, "User with this email already exists")
+		return utils.ConflictResponse(c, "User with this email already exists", nil)
 	}
 
 	user := models.User{

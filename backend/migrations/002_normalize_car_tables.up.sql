@@ -85,106 +85,257 @@ CREATE TABLE IF NOT EXISTS car_statuses (
 );
 
 -- Modify cars table to reference owner instead of embedding
-ALTER TABLE cars 
-    -- Drop embedded columns
-    DROP COLUMN IF EXISTS current_location CASCADE,
-    DROP COLUMN IF EXISTS available_branches CASCADE,
-    DROP COLUMN IF EXISTS rental_price_per_day CASCADE,
-    DROP COLUMN IF EXISTS rental_price_per_hour CASCADE,
-    DROP COLUMN IF EXISTS minimum_rent_duration CASCADE,
-    DROP COLUMN IF EXISTS maximum_rent_duration CASCADE,
-    DROP COLUMN IF EXISTS security_deposit CASCADE,
-    DROP COLUMN IF EXISTS late_fee_per_hour CASCADE,
-    DROP COLUMN IF EXISTS discounts CASCADE,
-    DROP COLUMN IF EXISTS images CASCADE,
-    DROP COLUMN IF EXISTS video CASCADE,
-    DROP COLUMN IF EXISTS insurance_expiry_date CASCADE,
-    DROP COLUMN IF EXISTS pollution_certificate_validity CASCADE,
-    DROP COLUMN IF EXISTS registration_certificate CASCADE,
-    DROP COLUMN IF EXISTS fitness_certificate CASCADE,
-    DROP COLUMN IF EXISTS permit_type CASCADE,
-    DROP COLUMN IF EXISTS is_available CASCADE,
-    DROP COLUMN IF EXISTS current_odometer_reading CASCADE,
-    DROP COLUMN IF EXISTS last_service_date CASCADE,
-    DROP COLUMN IF EXISTS next_service_due CASCADE,
-    DROP COLUMN IF EXISTS damages_or_issues CASCADE;
+DO $$
+BEGIN
+    -- Check if columns exist before trying to drop them
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'current_location') THEN
+        ALTER TABLE cars DROP COLUMN current_location CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'available_branches') THEN
+        ALTER TABLE cars DROP COLUMN available_branches CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'rental_price_per_day') THEN
+        ALTER TABLE cars DROP COLUMN rental_price_per_day CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'rental_price_per_hour') THEN
+        ALTER TABLE cars DROP COLUMN rental_price_per_hour CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'minimum_rent_duration') THEN
+        ALTER TABLE cars DROP COLUMN minimum_rent_duration CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'maximum_rent_duration') THEN
+        ALTER TABLE cars DROP COLUMN maximum_rent_duration CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'security_deposit') THEN
+        ALTER TABLE cars DROP COLUMN security_deposit CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'late_fee_per_hour') THEN
+        ALTER TABLE cars DROP COLUMN late_fee_per_hour CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'discounts') THEN
+        ALTER TABLE cars DROP COLUMN discounts CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'images') THEN
+        ALTER TABLE cars DROP COLUMN images CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'video') THEN
+        ALTER TABLE cars DROP COLUMN video CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'insurance_expiry_date') THEN
+        ALTER TABLE cars DROP COLUMN insurance_expiry_date CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'pollution_certificate_validity') THEN
+        ALTER TABLE cars DROP COLUMN pollution_certificate_validity CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'registration_certificate') THEN
+        ALTER TABLE cars DROP COLUMN registration_certificate CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'fitness_certificate') THEN
+        ALTER TABLE cars DROP COLUMN fitness_certificate CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'permit_type') THEN
+        ALTER TABLE cars DROP COLUMN permit_type CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'is_available') THEN
+        ALTER TABLE cars DROP COLUMN is_available CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'current_odometer_reading') THEN
+        ALTER TABLE cars DROP COLUMN current_odometer_reading CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'last_service_date') THEN
+        ALTER TABLE cars DROP COLUMN last_service_date CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'next_service_due') THEN
+        ALTER TABLE cars DROP COLUMN next_service_due CASCADE;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cars' AND column_name = 'damages_or_issues') THEN
+        ALTER TABLE cars DROP COLUMN damages_or_issues CASCADE;
+    END IF;
+END $$;
 
 -- Create migration to populate new tables from existing data
 DO $$
 DECLARE
     car_rec RECORD;
+    column_exists BOOLEAN;
 BEGIN
-    -- Migrate owner data
-    INSERT INTO owners (id, name, contact_info, created_at, updated_at)
-    SELECT DISTINCT owner_id, owner_name, contact_info, created_at, updated_at FROM cars;
-
-    -- For each car, create related records
-    FOR car_rec IN SELECT * FROM cars LOOP
-        -- Insert car_location
-        INSERT INTO car_locations (car_id, current_location, available_branches)
-        VALUES (car_rec.id, car_rec.current_location, car_rec.available_branches);
+    -- Check if we need to migrate data (only if cars has data and related tables are empty)
+    PERFORM 1 FROM cars LIMIT 1;
+    IF FOUND THEN
+        -- Check if owner_name column exists in cars table
+        SELECT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'cars' AND column_name = 'owner_name'
+        ) INTO column_exists;
         
-        -- Insert car_rental_info
-        INSERT INTO car_rental_infos (
-            car_id, rental_price_per_day, rental_price_per_hour, 
-            minimum_rent_duration, maximum_rent_duration, 
-            security_deposit, late_fee_per_hour, discounts
-        )
-        VALUES (
-            car_rec.id, car_rec.rental_price_per_day, car_rec.rental_price_per_hour,
-            car_rec.minimum_rent_duration, car_rec.maximum_rent_duration,
-            car_rec.security_deposit, car_rec.late_fee_per_hour, car_rec.discounts
-        );
+        -- Only migrate owner data if we have the owner_name column
+        IF column_exists THEN
+            -- Check if owners table is empty
+            PERFORM 1 FROM owners LIMIT 1;
+            IF NOT FOUND THEN
+                -- Migrate owner data
+                INSERT INTO owners (id, name, contact_info, created_at, updated_at)
+                SELECT DISTINCT owner_id, owner_name, contact_info, created_at, updated_at 
+                FROM cars 
+                WHERE owner_id IS NOT NULL AND owner_name IS NOT NULL
+                ON CONFLICT (id) DO NOTHING;
+            END IF;
+        END IF;
         
-        -- Insert car_media for images
-        IF car_rec.images IS NOT NULL AND car_rec.images::text <> '[]'::text THEN
-            FOR i IN 0..jsonb_array_length(car_rec.images)-1 LOOP
-                INSERT INTO car_media (car_id, type, url, is_primary)
-                VALUES (
-                    car_rec.id, 
-                    'image', 
-                    jsonb_array_element_text(car_rec.images, i),
-                    i = 0  -- First image is primary
-                );
+        -- Check if we have any of the columns needed for migration
+        SELECT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'cars' AND column_name = 'current_location'
+        ) INTO column_exists;
+        
+        -- Only proceed with detailed migration if we have the columns to migrate
+        IF column_exists THEN
+            -- For each car, create related records only if they don't exist yet
+            FOR car_rec IN SELECT * FROM cars LOOP
+                -- Check if car_location already exists
+                PERFORM 1 FROM car_locations WHERE car_id = car_rec.id LIMIT 1;
+                IF NOT FOUND THEN
+                    -- Insert car_location
+                    INSERT INTO car_locations (car_id, current_location, available_branches)
+                    VALUES (car_rec.id, car_rec.current_location, COALESCE(car_rec.available_branches, '[]'::jsonb));
+                END IF;
+                
+                -- Check if car_rental_info already exists
+                PERFORM 1 FROM car_rental_infos WHERE car_id = car_rec.id LIMIT 1;
+                IF NOT FOUND THEN
+                    -- Insert car_rental_info
+                    INSERT INTO car_rental_infos (
+                        car_id, rental_price_per_day, rental_price_per_hour, 
+                        minimum_rent_duration, maximum_rent_duration, 
+                        security_deposit, late_fee_per_hour, discounts
+                    )
+                    VALUES (
+                        car_rec.id, 
+                        COALESCE(car_rec.rental_price_per_day, 0), 
+                        car_rec.rental_price_per_hour,
+                        COALESCE(car_rec.minimum_rent_duration, 1), 
+                        COALESCE(car_rec.maximum_rent_duration, 30),
+                        COALESCE(car_rec.security_deposit, 0), 
+                        COALESCE(car_rec.late_fee_per_hour, 0), 
+                        car_rec.discounts
+                    );
+                END IF;
+                
+                -- Check if car has images
+                IF car_rec.images IS NOT NULL AND car_rec.images::text <> '[]'::text THEN
+                    -- Check if car already has media
+                    PERFORM 1 FROM car_media WHERE car_id = car_rec.id AND type = 'image' LIMIT 1;
+                    IF NOT FOUND THEN
+                        -- Insert car_media for images
+                        FOR i IN 0..jsonb_array_length(car_rec.images)-1 LOOP
+                            INSERT INTO car_media (car_id, type, url, is_primary)
+                            VALUES (
+                                car_rec.id, 
+                                'image', 
+                                jsonb_array_element_text(car_rec.images, i),
+                                i = 0  -- First image is primary
+                            );
+                        END LOOP;
+                    END IF;
+                END IF;
+                
+                -- Check if car has video and doesn't already have video in car_media
+                IF car_rec.video IS NOT NULL THEN
+                    PERFORM 1 FROM car_media WHERE car_id = car_rec.id AND type = 'video' LIMIT 1;
+                    IF NOT FOUND THEN
+                        -- Insert car_media for video
+                        INSERT INTO car_media (car_id, type, url)
+                        VALUES (car_rec.id, 'video', car_rec.video);
+                    END IF;
+                END IF;
+                
+                -- Check if car already has documents
+                PERFORM 1 FROM car_documents WHERE car_id = car_rec.id LIMIT 1;
+                IF NOT FOUND THEN
+                    -- Insert car documents
+                    INSERT INTO car_documents (
+                        car_id, document_type, expiry_date, document_path, permit_type
+                    )
+                    VALUES
+                    (car_rec.id, 'insurance', car_rec.insurance_expiry_date, 'insurance_cert_' || car_rec.id, car_rec.permit_type),
+                    (car_rec.id, 'pollution', car_rec.pollution_certificate_validity, car_rec.registration_certificate, car_rec.permit_type),
+                    (car_rec.id, 'registration', NULL, car_rec.registration_certificate, car_rec.permit_type),
+                    (car_rec.id, 'fitness', NULL, car_rec.fitness_certificate, car_rec.permit_type);
+                END IF;
+                
+                -- Check if car already has status
+                PERFORM 1 FROM car_statuses WHERE car_id = car_rec.id LIMIT 1;
+                IF NOT FOUND THEN
+                    -- Insert car status
+                    INSERT INTO car_statuses (
+                        car_id, is_available, current_odometer_reading,
+                        last_service_date, next_service_due, damages_or_issues
+                    )
+                    VALUES (
+                        car_rec.id, 
+                        COALESCE(car_rec.is_available, true), 
+                        COALESCE(car_rec.current_odometer_reading, 0),
+                        COALESCE(car_rec.last_service_date, CURRENT_DATE), 
+                        COALESCE(car_rec.next_service_due, CURRENT_DATE + INTERVAL '1 year'),
+                        car_rec.damages_or_issues
+                    );
+                END IF;
             END LOOP;
         END IF;
-        
-        -- Insert car_media for video
-        IF car_rec.video IS NOT NULL THEN
-            INSERT INTO car_media (car_id, type, url)
-            VALUES (car_rec.id, 'video', car_rec.video);
-        END IF;
-        
-        -- Insert car documents
-        INSERT INTO car_documents (
-            car_id, document_type, expiry_date, document_path, permit_type
-        )
-        VALUES
-        (car_rec.id, 'insurance', car_rec.insurance_expiry_date, 'insurance_cert_' || car_rec.id, car_rec.permit_type),
-        (car_rec.id, 'pollution', car_rec.pollution_certificate_validity, car_rec.registration_certificate, car_rec.permit_type),
-        (car_rec.id, 'registration', NULL, car_rec.registration_certificate, car_rec.permit_type),
-        (car_rec.id, 'fitness', NULL, car_rec.fitness_certificate, car_rec.permit_type);
-        
-        -- Insert car status
-        INSERT INTO car_statuses (
-            car_id, is_available, current_odometer_reading,
-            last_service_date, next_service_due, damages_or_issues
-        )
-        VALUES (
-            car_rec.id, car_rec.is_available, car_rec.current_odometer_reading,
-            car_rec.last_service_date, car_rec.next_service_due, car_rec.damages_or_issues
-        );
-    END LOOP;
+    END IF;
 END $$;
 
--- Create indexes for efficient querying
-CREATE INDEX idx_car_locations_car_id ON car_locations(car_id);
-CREATE INDEX idx_car_rental_infos_car_id ON car_rental_infos(car_id);
-CREATE INDEX idx_car_media_car_id ON car_media(car_id);
-CREATE INDEX idx_car_documents_car_id ON car_documents(car_id);
-CREATE INDEX idx_car_statuses_car_id ON car_statuses(car_id);
-CREATE INDEX idx_car_statuses_is_available ON car_statuses(is_available);
-CREATE INDEX idx_cars_owner_id ON cars(owner_id);
+-- Create indexes for efficient querying - using IF NOT EXISTS to avoid errors
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_car_locations_car_id') THEN
+        CREATE INDEX idx_car_locations_car_id ON car_locations(car_id);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_car_rental_infos_car_id') THEN
+        CREATE INDEX idx_car_rental_infos_car_id ON car_rental_infos(car_id);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_car_media_car_id') THEN
+        CREATE INDEX idx_car_media_car_id ON car_media(car_id);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_car_documents_car_id') THEN
+        CREATE INDEX idx_car_documents_car_id ON car_documents(car_id);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_car_statuses_car_id') THEN
+        CREATE INDEX idx_car_statuses_car_id ON car_statuses(car_id);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_car_statuses_is_available') THEN
+        CREATE INDEX idx_car_statuses_is_available ON car_statuses(is_available);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_cars_owner_id') THEN
+        CREATE INDEX idx_cars_owner_id ON cars(owner_id);
+    END IF;
+END $$;
 
 -- Create trigger for updated_at on all tables
 DO $$

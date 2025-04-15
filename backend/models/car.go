@@ -38,7 +38,7 @@ type CarLocation struct {
 	Base
 	CarID             uuid.UUID `json:"-" gorm:"index"`
 	CurrentLocation   string    `json:"current_location"`
-	AvailableBranches []string  `json:"available_branches" gorm:"type:jsonb"`
+	AvailableBranches []string  `json:"available_branches" gorm:"type:jsonb;serializer:json"`
 }
 
 // CarRentalInfo represents the rental-related information

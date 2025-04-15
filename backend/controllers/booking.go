@@ -51,7 +51,7 @@ func CreateBooking(c *fiber.Ctx) error {
 	}
 
 	if car.CurrentStatus == nil || !car.CurrentStatus.IsAvailable {
-		return utils.ConflictResponse(c, "Car is not available")
+		return utils.ConflictResponse(c, "Car is not available", nil)
 	}
 
 	// Check for booking conflicts
@@ -62,7 +62,7 @@ func CreateBooking(c *fiber.Ctx) error {
 		Count(&conflictCount)
 
 	if conflictCount > 0 {
-		return utils.ConflictResponse(c, "Car is already booked for this time period")
+		return utils.ConflictResponse(c, "Car is already booked for this time period", nil)
 	}
 
 	// Calculate total price

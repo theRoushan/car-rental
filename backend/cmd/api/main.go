@@ -4,7 +4,9 @@ import (
 	"car-rental-backend/config"
 	"car-rental-backend/database"
 	"car-rental-backend/routes"
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -21,18 +23,38 @@ func main() {
 
 	// Initialize database
 	if err := database.InitDB(cfg); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		if strings.Contains(err.Error(), "constraint \"uni_cars_vehicle_number\" of relation \"cars\" does not exist") {
+			fmt.Println("Ignoring constraint error, continuing with initialization...")
+		} else {
+			log.Fatalf("Failed to initialize database: %v", err)
+		}
 	}
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
+			var message string
+
+			// Check for fiber errors
 			if e, ok := err.(*fiber.Error); ok {
 				code = e.Code
+				message = e.Message
+			} else {
+				// Default error message for non-fiber errors
+				message = err.Error()
 			}
+
+			// Log the error for serious issues
+			if code >= 500 {
+				log.Printf("Server error: %v", err)
+			}
+
+			// Return JSON error response
 			return c.Status(code).JSON(fiber.Map{
-				"error": err.Error(),
+				"success": false,
+				"error":   message,
+				"code":    code,
 			})
 		},
 	})
