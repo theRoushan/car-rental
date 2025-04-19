@@ -38,7 +38,7 @@ class CarRepository {
       final response = await _dio.get('$_baseUrl/cars/$id');
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json,
+        (json) => json as Map<String, dynamic>,
       );
       
       if (!apiResponse.success) {
@@ -63,7 +63,7 @@ class CarRepository {
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json,
+        (json) => json as Map<String, dynamic>,
       );
       
       if (!apiResponse.success) {
@@ -88,7 +88,7 @@ class CarRepository {
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json,
+        (json) => json as Map<String, dynamic>,
       );
       
       if (!apiResponse.success) {
@@ -129,7 +129,7 @@ class CarRepository {
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json,
+        (json) => json as Map<String, dynamic>,
       );
       
       if (!apiResponse.success) {
@@ -154,7 +154,7 @@ class CarRepository {
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json,
+        (json) => json as Map<String, dynamic>,
       );
       
       if (!apiResponse.success) {
@@ -194,7 +194,7 @@ class CarRepository {
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json,
+        (json) => json as Map<String, dynamic>,
       );
       
       if (!apiResponse.success) {

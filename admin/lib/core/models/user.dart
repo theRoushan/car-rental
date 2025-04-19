@@ -44,7 +44,7 @@ class User {
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
-      token: token ?? token,
+      token: token ?? this.token,
       createdAt: createdAt ?? this.createdAt,
     );
   }
