@@ -1,5 +1,7 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../cars/bloc/car_bloc.dart';
@@ -66,19 +68,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.directions_car),
+            icon: Icon(FluentIcons.vehicle_car_32_regular),
             label: 'Cars',
           ),
           NavigationDestination(
-            icon: Icon(Icons.book),
+            icon: FaIcon(FontAwesomeIcons.calendarCheck),
             label: 'Bookings',
           ),
           NavigationDestination(
-            icon: Icon(Icons.people),
+            icon: FaIcon(FontAwesomeIcons.user),
             label: 'Owners',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings),
+            icon: FaIcon(FontAwesomeIcons.spaghettiMonsterFlying),
             label: 'Settings',
           ),
         ],

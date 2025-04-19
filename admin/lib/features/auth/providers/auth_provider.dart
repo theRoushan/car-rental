@@ -29,7 +29,7 @@ class AuthProvider extends ChangeNotifier {
           'email': email,
           'password': password,
         },
-        fromJson: (json) => json as Map<String, dynamic>,
+        fromJson: (json) => json,
       );
 
       if (response.success && response.data != null) {
@@ -68,7 +68,7 @@ class AuthProvider extends ChangeNotifier {
           'password': password,
           'role': 'admin',
         },
-        fromJson: (json) => json as Map<String, dynamic>,
+        fromJson: (json) => json,
       );
 
       if (response.success && response.data != null) {
