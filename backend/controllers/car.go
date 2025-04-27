@@ -14,33 +14,26 @@ import (
 // CreateCarRequest represents the request body for creating a new car
 type CreateCarRequest struct {
 	// Basic Car Details
-	Make              string `json:"make" validate:"required"`
-	Model             string `json:"model" validate:"required"`
-	Year              int    `json:"year" validate:"required,min=1900,max=2024"`
-	Variant           string `json:"variant" validate:"required"`
-	FuelType          string `json:"fuel_type" validate:"required,oneof=Petrol Diesel Electric Hybrid"`
-	Transmission      string `json:"transmission" validate:"required,oneof=Manual Automatic CVT"`
-	BodyType          string `json:"body_type" validate:"required,oneof=Sedan SUV Hatchback Coupe Van Truck"`
-	Color             string `json:"color" validate:"required"`
-	SeatingCapacity   int    `json:"seating_capacity" validate:"required,min=1,max=50"`
-	VehicleNumber     string `json:"vehicle_number" validate:"required"`
-	RegistrationState string `json:"registration_state" validate:"required"`
-
-	// Location Info
-	Location struct {
-		CurrentLocation   string   `json:"current_location" validate:"required"`
-		AvailableBranches []string `json:"available_branches" validate:"required,min=1"`
-	} `json:"location" validate:"required"`
+	Make            string `json:"make" validate:"required"`
+	Model           string `json:"model" validate:"required"`
+	Year            int    `json:"year" validate:"required,min=1900,max=2024"`
+	Variant         string `json:"variant" validate:"required"`
+	FuelType        string `json:"fuel_type" validate:"required,oneof=Petrol Diesel Electric Hybrid"`
+	Transmission    string `json:"transmission" validate:"required,oneof=Manual Automatic CVT"`
+	BodyType        string `json:"body_type" validate:"required,oneof=Sedan SUV Hatchback Coupe Van Truck"`
+	Color           string `json:"color" validate:"required"`
+	SeatingCapacity int    `json:"seating_capacity" validate:"required,min=1,max=50"`
+	VehicleNumber   string `json:"vehicle_number" validate:"required"`
 
 	// Rental Info
 	RentalInfo struct {
-		RentalPricePerDay   float64  `json:"rental_price_per_day" validate:"required,min=0"`
-		RentalPricePerHour  *float64 `json:"rental_price_per_hour,omitempty"`
-		MinimumRentDuration int      `json:"minimum_rent_duration" validate:"required,min=1"`
-		MaximumRentDuration int      `json:"maximum_rent_duration" validate:"required,min=1"`
-		SecurityDeposit     float64  `json:"security_deposit" validate:"required,min=0"`
-		LateFeePerHour      float64  `json:"late_fee_per_hour" validate:"required,min=0"`
-		Discounts           *string  `json:"discounts,omitempty"`
+		RentalPricePerDay      float64 `json:"rental_price_per_day" validate:"required,min=0"`
+		RentalPricePerHour     float64 `json:"rental_price_per_hour" validate:"required,min=0"`
+		MinimumRentDuration    int     `json:"minimum_rent_duration" validate:"required,min=1"`
+		SecurityDeposit        float64 `json:"security_deposit" validate:"required,min=0"`
+		LateFeePerHour         float64 `json:"late_fee_per_hour" validate:"required,min=0"`
+		RentalExtendFeePerDay  float64 `json:"rental_extend_fee_per_day" validate:"required,min=0"`
+		RentalExtendFeePerHour float64 `json:"rental_extend_fee_per_hour" validate:"required,min=0"`
 	} `json:"rental_info" validate:"required"`
 
 	// Media
@@ -49,22 +42,11 @@ type CreateCarRequest struct {
 		Video  *string  `json:"video,omitempty"`
 	} `json:"media" validate:"required"`
 
-	// Documentation
-	Documentation struct {
-		InsuranceExpiryDate     string `json:"insurance_expiry_date" validate:"required"`
-		PollutionCertValidity   string `json:"pollution_certificate_validity" validate:"required"`
-		RegistrationCertificate string `json:"registration_certificate" validate:"required"`
-		FitnessCertificate      string `json:"fitness_certificate" validate:"required"`
-		PermitType              string `json:"permit_type" validate:"required,oneof=Self-drive Commercial"`
-	} `json:"documentation" validate:"required"`
-
 	// Status Info
 	Status struct {
-		IsAvailable            bool    `json:"is_available"`
-		CurrentOdometerReading float64 `json:"current_odometer_reading" validate:"required,min=0"`
-		LastServiceDate        string  `json:"last_service_date" validate:"required"`
-		NextServiceDue         string  `json:"next_service_due" validate:"required"`
-		DamagesOrIssues        *string `json:"damages_or_issues,omitempty"`
+		IsAvailable            bool     `json:"is_available"`
+		CurrentOdometerReading float64  `json:"current_odometer_reading" validate:"required,min=0"`
+		DamagesOrIssues        []string `json:"damages_or_issues,omitempty"`
 	} `json:"status" validate:"required"`
 
 	// Owner Info
@@ -76,33 +58,26 @@ type CreateCarRequest struct {
 // UpdateCarRequest represents the request body for updating a car
 type UpdateCarRequest struct {
 	// Basic Car Details
-	Make              *string `json:"make,omitempty"`
-	Model             *string `json:"model,omitempty"`
-	Year              *int    `json:"year,omitempty"`
-	Variant           *string `json:"variant,omitempty"`
-	FuelType          *string `json:"fuel_type,omitempty"`
-	Transmission      *string `json:"transmission,omitempty"`
-	BodyType          *string `json:"body_type,omitempty"`
-	Color             *string `json:"color,omitempty"`
-	SeatingCapacity   *int    `json:"seating_capacity,omitempty"`
-	VehicleNumber     *string `json:"vehicle_number,omitempty"`
-	RegistrationState *string `json:"registration_state,omitempty"`
-
-	// Location Info
-	Location *struct {
-		CurrentLocation   *string  `json:"current_location,omitempty"`
-		AvailableBranches []string `json:"available_branches,omitempty"`
-	} `json:"location,omitempty"`
+	Make            *string `json:"make,omitempty"`
+	Model           *string `json:"model,omitempty"`
+	Year            *int    `json:"year,omitempty"`
+	Variant         *string `json:"variant,omitempty"`
+	FuelType        *string `json:"fuel_type,omitempty"`
+	Transmission    *string `json:"transmission,omitempty"`
+	BodyType        *string `json:"body_type,omitempty"`
+	Color           *string `json:"color,omitempty"`
+	SeatingCapacity *int    `json:"seating_capacity,omitempty"`
+	VehicleNumber   *string `json:"vehicle_number,omitempty"`
 
 	// Rental Info
 	RentalInfo *struct {
-		RentalPricePerDay   *float64 `json:"rental_price_per_day,omitempty"`
-		RentalPricePerHour  *float64 `json:"rental_price_per_hour,omitempty"`
-		MinimumRentDuration *int     `json:"minimum_rent_duration,omitempty"`
-		MaximumRentDuration *int     `json:"maximum_rent_duration,omitempty"`
-		SecurityDeposit     *float64 `json:"security_deposit,omitempty"`
-		LateFeePerHour      *float64 `json:"late_fee_per_hour,omitempty"`
-		Discounts           *string  `json:"discounts,omitempty"`
+		RentalPricePerDay      *float64 `json:"rental_price_per_day,omitempty"`
+		RentalPricePerHour     *float64 `json:"rental_price_per_hour,omitempty"`
+		MinimumRentDuration    *int     `json:"minimum_rent_duration,omitempty"`
+		SecurityDeposit        *float64 `json:"security_deposit,omitempty"`
+		LateFeePerHour         *float64 `json:"late_fee_per_hour,omitempty"`
+		RentalExtendFeePerDay  *float64 `json:"rental_extend_fee_per_day,omitempty"`
+		RentalExtendFeePerHour *float64 `json:"rental_extend_fee_per_hour,omitempty"`
 	} `json:"rental_info,omitempty"`
 
 	// Media
@@ -112,22 +87,11 @@ type UpdateCarRequest struct {
 		Video        *string  `json:"video,omitempty"`
 	} `json:"media,omitempty"`
 
-	// Documentation
-	Documentation *struct {
-		InsuranceExpiryDate     *string `json:"insurance_expiry_date,omitempty"`
-		PollutionCertValidity   *string `json:"pollution_certificate_validity,omitempty"`
-		RegistrationCertificate *string `json:"registration_certificate,omitempty"`
-		FitnessCertificate      *string `json:"fitness_certificate,omitempty"`
-		PermitType              *string `json:"permit_type,omitempty"`
-	} `json:"documentation,omitempty"`
-
 	// Status Info
 	Status *struct {
-		IsAvailable            *bool    `json:"is_available,omitempty"`
-		CurrentOdometerReading *float64 `json:"current_odometer_reading,omitempty"`
-		LastServiceDate        *string  `json:"last_service_date,omitempty"`
-		NextServiceDue         *string  `json:"next_service_due,omitempty"`
-		DamagesOrIssues        *string  `json:"damages_or_issues,omitempty"`
+		IsAvailable            *bool     `json:"is_available,omitempty"`
+		CurrentOdometerReading *float64  `json:"current_odometer_reading,omitempty"`
+		DamagesOrIssues        *[]string `json:"damages_or_issues,omitempty"`
 	} `json:"status,omitempty"`
 
 	// Owner Info
@@ -163,69 +127,19 @@ func CreateCar(c *fiber.Ctx) error {
 		})
 	}
 
-	// Parse date strings
-	insuranceExpiryDate, err := time.Parse("2006-01-02", req.Documentation.InsuranceExpiryDate)
-	if err != nil {
-		return utils.ValidationErrorResponse(c, "Invalid date format", []string{
-			"Invalid insurance expiry date. Format should be YYYY-MM-DD",
-		})
-	}
-
-	pollutionCertValidity, err := time.Parse("2006-01-02", req.Documentation.PollutionCertValidity)
-	if err != nil {
-		return utils.ValidationErrorResponse(c, "Invalid date format", []string{
-			"Invalid pollution certificate validity. Format should be YYYY-MM-DD",
-		})
-	}
-
-	lastServiceDate, err := time.Parse("2006-01-02", req.Status.LastServiceDate)
-	if err != nil {
-		return utils.ValidationErrorResponse(c, "Invalid date format", []string{
-			"Invalid last service date. Format should be YYYY-MM-DD",
-		})
-	}
-
-	nextServiceDue, err := time.Parse("2006-01-02", req.Status.NextServiceDue)
-	if err != nil {
-		return utils.ValidationErrorResponse(c, "Invalid date format", []string{
-			"Invalid next service due date. Format should be YYYY-MM-DD",
-		})
-	}
-
-	// Validate date logic
-	now := time.Now()
-	if insuranceExpiryDate.Before(now) {
-		return utils.ValidationErrorResponse(c, "Invalid expiry date", []string{
-			"Insurance expiry date cannot be in the past",
-		})
-	}
-
-	if pollutionCertValidity.Before(now) {
-		return utils.ValidationErrorResponse(c, "Invalid expiry date", []string{
-			"Pollution certificate validity cannot be in the past",
-		})
-	}
-
-	if nextServiceDue.Before(lastServiceDate) {
-		return utils.ValidationErrorResponse(c, "Invalid service dates", []string{
-			"Next service due date must be after last service date",
-		})
-	}
-
 	// Create the car with basic details
 	car := &models.Car{
-		Make:              req.Make,
-		Model:             req.Model,
-		Year:              req.Year,
-		Variant:           req.Variant,
-		FuelType:          models.FuelType(req.FuelType),
-		Transmission:      models.TransmissionType(req.Transmission),
-		BodyType:          models.BodyType(req.BodyType),
-		Color:             req.Color,
-		SeatingCapacity:   req.SeatingCapacity,
-		VehicleNumber:     req.VehicleNumber,
-		RegistrationState: req.RegistrationState,
-		OwnerID:           req.Owner.OwnerID,
+		Make:            req.Make,
+		Model:           req.Model,
+		Year:            req.Year,
+		Variant:         req.Variant,
+		FuelType:        models.FuelType(req.FuelType),
+		Transmission:    models.TransmissionType(req.Transmission),
+		BodyType:        models.BodyType(req.BodyType),
+		Color:           req.Color,
+		SeatingCapacity: req.SeatingCapacity,
+		VehicleNumber:   req.VehicleNumber,
+		OwnerID:         req.Owner.OwnerID,
 	}
 
 	// Verify that the owner exists
@@ -239,38 +153,19 @@ func CreateCar(c *fiber.Ctx) error {
 		})
 	}
 
-	// Validate location
-	if len(req.Location.AvailableBranches) == 0 {
-		return utils.ValidationErrorResponse(c, "Invalid location", []string{
-			"At least one available branch must be specified",
-		})
-	}
-	location := &models.CarLocation{
-		CurrentLocation:   req.Location.CurrentLocation,
-		AvailableBranches: req.Location.AvailableBranches,
-	}
-
-	// Validate rental info
-	if req.RentalInfo.MaximumRentDuration < req.RentalInfo.MinimumRentDuration {
-		return utils.ValidationErrorResponse(c, "Invalid rental duration", []string{
-			"Maximum rent duration must be greater than or equal to minimum rent duration",
-		})
-	}
 	rentalInfo := &models.CarRentalInfo{
-		RentalPricePerDay:   req.RentalInfo.RentalPricePerDay,
-		RentalPricePerHour:  req.RentalInfo.RentalPricePerHour,
-		MinimumRentDuration: req.RentalInfo.MinimumRentDuration,
-		MaximumRentDuration: req.RentalInfo.MaximumRentDuration,
-		SecurityDeposit:     req.RentalInfo.SecurityDeposit,
-		LateFeePerHour:      req.RentalInfo.LateFeePerHour,
-		Discounts:           req.RentalInfo.Discounts,
+		RentalPricePerDay:      req.RentalInfo.RentalPricePerDay,
+		RentalPricePerHour:     req.RentalInfo.RentalPricePerHour,
+		MinimumRentDuration:    req.RentalInfo.MinimumRentDuration,
+		SecurityDeposit:        req.RentalInfo.SecurityDeposit,
+		LateFeePerHour:         req.RentalInfo.LateFeePerHour,
+		RentalExtendFeePerDay:  req.RentalInfo.RentalExtendFeePerDay,
+		RentalExtendFeePerHour: req.RentalInfo.RentalExtendFeePerHour,
 	}
 
 	status := &models.CarStatus{
 		IsAvailable:            req.Status.IsAvailable,
 		CurrentOdometerReading: req.Status.CurrentOdometerReading,
-		LastServiceDate:        lastServiceDate,
-		NextServiceDue:         nextServiceDue,
 		DamagesOrIssues:        req.Status.DamagesOrIssues,
 	}
 
@@ -312,43 +207,8 @@ func CreateCar(c *fiber.Ctx) error {
 		mediaEntries = append(mediaEntries, mediaEntry)
 	}
 
-	// Create document entries
-	insuranceDoc := models.CarDocument{
-		DocumentType: "insurance",
-		ExpiryDate:   &insuranceExpiryDate,
-		DocumentPath: "insurance_cert_" + req.VehicleNumber,
-		PermitType:   models.PermitType(req.Documentation.PermitType),
-	}
-
-	pollutionDoc := models.CarDocument{
-		DocumentType: "pollution",
-		ExpiryDate:   &pollutionCertValidity,
-		DocumentPath: req.Documentation.PollutionCertValidity,
-		PermitType:   models.PermitType(req.Documentation.PermitType),
-	}
-
-	registrationDoc := models.CarDocument{
-		DocumentType: "registration",
-		DocumentPath: req.Documentation.RegistrationCertificate,
-		PermitType:   models.PermitType(req.Documentation.PermitType),
-	}
-
-	fitnessDoc := models.CarDocument{
-		DocumentType: "fitness",
-		DocumentPath: req.Documentation.FitnessCertificate,
-		PermitType:   models.PermitType(req.Documentation.PermitType),
-	}
-
-	documents := []models.CarDocument{
-		insuranceDoc,
-		pollutionDoc,
-		registrationDoc,
-		fitnessDoc,
-	}
-
 	// Create the car with all related entities in a transaction
-	// Notice we're not passing owner anymore as we already have owner_id in car struct
-	createdCar, err := carService.CreateCarWithOwnerID(car, req.Owner.OwnerID, location, rentalInfo, mediaEntries, documents, status)
+	createdCar, err := carService.CreateCarWithoutDocAndLoc(car, req.Owner.OwnerID, rentalInfo, mediaEntries, status)
 	if err != nil {
 		// Use the database error handler for better error responses
 		return utils.HandleDatabaseError(c, err)
@@ -425,7 +285,6 @@ func UpdateCar(c *fiber.Ctx) error {
 
 	// Prepare update maps for different entities
 	carUpdates := make(map[string]interface{})
-	locationUpdates := make(map[string]interface{})
 	rentalInfoUpdates := make(map[string]interface{})
 	statusUpdates := make(map[string]interface{})
 
@@ -460,19 +319,6 @@ func UpdateCar(c *fiber.Ctx) error {
 	if req.VehicleNumber != nil {
 		carUpdates["vehicle_number"] = *req.VehicleNumber
 	}
-	if req.RegistrationState != nil {
-		carUpdates["registration_state"] = *req.RegistrationState
-	}
-
-	// Location info
-	if req.Location != nil {
-		if req.Location.CurrentLocation != nil {
-			locationUpdates["current_location"] = *req.Location.CurrentLocation
-		}
-		if len(req.Location.AvailableBranches) > 0 {
-			locationUpdates["available_branches"] = req.Location.AvailableBranches
-		}
-	}
 
 	// Rental info
 	if req.RentalInfo != nil {
@@ -485,17 +331,17 @@ func UpdateCar(c *fiber.Ctx) error {
 		if req.RentalInfo.MinimumRentDuration != nil {
 			rentalInfoUpdates["minimum_rent_duration"] = *req.RentalInfo.MinimumRentDuration
 		}
-		if req.RentalInfo.MaximumRentDuration != nil {
-			rentalInfoUpdates["maximum_rent_duration"] = *req.RentalInfo.MaximumRentDuration
-		}
 		if req.RentalInfo.SecurityDeposit != nil {
 			rentalInfoUpdates["security_deposit"] = *req.RentalInfo.SecurityDeposit
 		}
 		if req.RentalInfo.LateFeePerHour != nil {
 			rentalInfoUpdates["late_fee_per_hour"] = *req.RentalInfo.LateFeePerHour
 		}
-		if req.RentalInfo.Discounts != nil {
-			rentalInfoUpdates["discounts"] = *req.RentalInfo.Discounts
+		if req.RentalInfo.RentalExtendFeePerDay != nil {
+			rentalInfoUpdates["rental_extend_fee_per_day"] = *req.RentalInfo.RentalExtendFeePerDay
+		}
+		if req.RentalInfo.RentalExtendFeePerHour != nil {
+			rentalInfoUpdates["rental_extend_fee_per_hour"] = *req.RentalInfo.RentalExtendFeePerHour
 		}
 	}
 
@@ -549,42 +395,6 @@ func UpdateCar(c *fiber.Ctx) error {
 		}
 	}
 
-	// Documentation updates
-	if req.Documentation != nil {
-		// Update document expiry dates and paths as needed
-		for _, doc := range existingCar.Documents {
-			if req.Documentation.InsuranceExpiryDate != nil && doc.DocumentType == "insurance" {
-				// Parse the date
-				expiryDate, err := time.Parse("2006-01-02", *req.Documentation.InsuranceExpiryDate)
-				if err != nil {
-					return utils.ValidationErrorResponse(c, "Invalid date format", []string{
-						"Invalid insurance expiry date. Format should be YYYY-MM-DD",
-					})
-				}
-				err = carService.UpdateDocumentExpiry(doc.ID, expiryDate)
-				if err != nil {
-					return utils.ServerErrorResponse(c, "Failed to update insurance expiry: "+err.Error())
-				}
-			}
-
-			if req.Documentation.PollutionCertValidity != nil && doc.DocumentType == "pollution" {
-				// Parse the date
-				expiryDate, err := time.Parse("2006-01-02", *req.Documentation.PollutionCertValidity)
-				if err != nil {
-					return utils.ValidationErrorResponse(c, "Invalid date format", []string{
-						"Invalid pollution certificate validity. Format should be YYYY-MM-DD",
-					})
-				}
-				err = carService.UpdateDocumentExpiry(doc.ID, expiryDate)
-				if err != nil {
-					return utils.ServerErrorResponse(c, "Failed to update pollution certificate validity: "+err.Error())
-				}
-			}
-
-			// You can handle other document updates similarly
-		}
-	}
-
 	// Status info
 	if req.Status != nil {
 		if req.Status.IsAvailable != nil {
@@ -592,26 +402,6 @@ func UpdateCar(c *fiber.Ctx) error {
 		}
 		if req.Status.CurrentOdometerReading != nil {
 			statusUpdates["current_odometer_reading"] = *req.Status.CurrentOdometerReading
-		}
-		if req.Status.LastServiceDate != nil {
-			// Parse the date
-			lastServiceDate, err := time.Parse("2006-01-02", *req.Status.LastServiceDate)
-			if err != nil {
-				return utils.ValidationErrorResponse(c, "Invalid date format", []string{
-					"Invalid last service date. Format should be YYYY-MM-DD",
-				})
-			}
-			statusUpdates["last_service_date"] = lastServiceDate
-		}
-		if req.Status.NextServiceDue != nil {
-			// Parse the date
-			nextServiceDue, err := time.Parse("2006-01-02", *req.Status.NextServiceDue)
-			if err != nil {
-				return utils.ValidationErrorResponse(c, "Invalid date format", []string{
-					"Invalid next service due date. Format should be YYYY-MM-DD",
-				})
-			}
-			statusUpdates["next_service_due"] = nextServiceDue
 		}
 		if req.Status.DamagesOrIssues != nil {
 			statusUpdates["damages_or_issues"] = *req.Status.DamagesOrIssues
@@ -624,7 +414,7 @@ func UpdateCar(c *fiber.Ctx) error {
 	}
 
 	// Update the car and related entities
-	updatedCar, err := carService.UpdateCar(carID, carUpdates, locationUpdates, rentalInfoUpdates, statusUpdates)
+	updatedCar, err := carService.UpdateCar(carID, carUpdates, rentalInfoUpdates, statusUpdates)
 	if err != nil {
 		return utils.ServerErrorResponse(c, "Failed to update car: "+err.Error())
 	}
@@ -690,7 +480,7 @@ func GetAvailableCars(c *fiber.Ctx) error {
 	// Use a custom query to find cars available for booking in the specified time range
 	carService := services.NewCarService()
 	isAvailable := true
-	cars, err := carService.SearchCars("", "", "", &isAvailable, nil, nil)
+	cars, err := carService.SearchCars("", "", &isAvailable, nil, nil)
 	if err != nil {
 		return utils.ServerErrorResponse(c, "Failed to fetch available cars: "+err.Error())
 	}

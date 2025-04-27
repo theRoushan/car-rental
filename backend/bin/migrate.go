@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"car-rental-backend/config"
 
 	_ "github.com/lib/pq"
 )
@@ -18,6 +19,7 @@ func main() {
 	// Parse command line flags
 	up := flag.Bool("up", false, "Run migrations up")
 	down := flag.Bool("down", false, "Run migrations down")
+	specific := flag.String("migration", "", "Run a specific migration (provide name without .up.sql or .down.sql)")
 	flag.Parse()
 
 	if !*up && !*down {
@@ -26,19 +28,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Get database connection string from environment variables
-	dbHost := getEnv("DB_HOST", "localhost")
-	dbPort := getEnv("DB_PORT", "5432")
-	dbUser := getEnv("DB_USER", "postgres")
-	dbPassword := getEnv("DB_PASSWORD", "postgres")
-	dbName := getEnv("DB_NAME", "car_rental")
-	dbSSLMode := getEnv("DB_SSL_MODE", "disable")
+	// Load environment variables
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading config: %v", err)
+	}
 
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
+	// Create database connection string
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBName,
+		cfg.DBSSLMode,
+	)
 
 	// Connect to the database
-	db, err := sql.Open("postgres", connStr)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
@@ -64,7 +71,7 @@ func main() {
 
 	// Get list of migration files
 	migrationsDir := "./migrations"
-	files, err := ioutil.ReadDir(migrationsDir)
+	files, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		log.Fatalf("Error reading migrations directory: %v", err)
 	}
@@ -94,6 +101,20 @@ func main() {
 		appliedMigrations[name] = true
 	}
 
+	// If a specific migration is specified, filter to only that migration
+	if *specific != "" {
+		var specificFiles []string
+		for _, file := range migrationFiles {
+			if strings.HasPrefix(file, *specific) || strings.Contains(file, "_"+*specific+".") {
+				specificFiles = append(specificFiles, file)
+			}
+		}
+		if len(specificFiles) == 0 {
+			log.Fatalf("No migration files found matching: %s", *specific)
+		}
+		migrationFiles = specificFiles
+	}
+
 	// Run migrations
 	if *up {
 		runMigrationsUp(db, migrationsDir, migrationFiles, appliedMigrations)
@@ -103,6 +124,10 @@ func main() {
 }
 
 func runMigrationsUp(db *sql.DB, migrationsDir string, migrationFiles []string, appliedMigrations map[string]bool) {
+	successCount := 0
+	skippedCount := 0
+	failedCount := 0
+
 	for _, file := range migrationFiles {
 		if !strings.HasSuffix(file, ".up.sql") {
 			continue
@@ -111,50 +136,73 @@ func runMigrationsUp(db *sql.DB, migrationsDir string, migrationFiles []string, 
 		migrationName := strings.TrimSuffix(file, ".up.sql")
 		if appliedMigrations[migrationName] {
 			fmt.Printf("Migration %s already applied, skipping\n", migrationName)
+			skippedCount++
 			continue
 		}
 
 		fmt.Printf("Applying migration %s...\n", migrationName)
 		sqlFile := filepath.Join(migrationsDir, file)
-		sql, err := ioutil.ReadFile(sqlFile)
+		sqlBytes, err := os.ReadFile(sqlFile)
 		if err != nil {
-			log.Fatalf("Error reading migration file %s: %v", file, err)
+			log.Printf("Error reading migration file %s: %v", file, err)
+			failedCount++
+			continue
 		}
+		sql := string(sqlBytes)
 
 		// Start a transaction
 		tx, err := db.Begin()
 		if err != nil {
-			log.Fatalf("Error starting transaction: %v", err)
+			log.Printf("Error starting transaction: %v", err)
+			failedCount++
+			continue
 		}
 
 		// Execute the migration
-		_, err = tx.Exec(string(sql))
+		_, err = tx.Exec(sql)
 		if err != nil {
 			tx.Rollback()
-			log.Fatalf("Error executing migration %s: %v", file, err)
+			log.Printf("Error executing migration %s: %v", file, err)
+			failedCount++
+			continue
 		}
 
 		// Record the migration
 		_, err = tx.Exec("INSERT INTO migrations (name) VALUES ($1)", migrationName)
 		if err != nil {
 			tx.Rollback()
-			log.Fatalf("Error recording migration %s: %v", migrationName, err)
+			log.Printf("Error recording migration %s: %v", migrationName, err)
+			failedCount++
+			continue
 		}
 
 		// Commit the transaction
 		err = tx.Commit()
 		if err != nil {
-			log.Fatalf("Error committing transaction: %v", err)
+			log.Printf("Error committing transaction: %v", err)
+			failedCount++
+			continue
 		}
 
 		fmt.Printf("Migration %s applied successfully\n", migrationName)
+		successCount++
 	}
+
+	fmt.Printf("\nMigration summary: %d successful, %d skipped, %d failed\n",
+		successCount, skippedCount, failedCount)
 }
 
 func runMigrationsDown(db *sql.DB, migrationsDir string, migrationFiles []string, appliedMigrations map[string]bool) {
 	// Reverse the order of migrations for down migration
-	for i := len(migrationFiles) - 1; i >= 0; i-- {
-		file := migrationFiles[i]
+	for i, j := 0, len(migrationFiles)-1; i < j; i, j = i+1, j-1 {
+		migrationFiles[i], migrationFiles[j] = migrationFiles[j], migrationFiles[i]
+	}
+
+	successCount := 0
+	skippedCount := 0
+	failedCount := 0
+
+	for _, file := range migrationFiles {
 		if !strings.HasSuffix(file, ".down.sql") {
 			continue
 		}
@@ -162,50 +210,58 @@ func runMigrationsDown(db *sql.DB, migrationsDir string, migrationFiles []string
 		migrationName := strings.TrimSuffix(file, ".down.sql")
 		if !appliedMigrations[migrationName] {
 			fmt.Printf("Migration %s not applied, skipping\n", migrationName)
+			skippedCount++
 			continue
 		}
 
 		fmt.Printf("Reverting migration %s...\n", migrationName)
 		sqlFile := filepath.Join(migrationsDir, file)
-		sql, err := ioutil.ReadFile(sqlFile)
+		sqlBytes, err := os.ReadFile(sqlFile)
 		if err != nil {
-			log.Fatalf("Error reading migration file %s: %v", file, err)
+			log.Printf("Error reading migration file %s: %v", file, err)
+			failedCount++
+			continue
 		}
+		sql := string(sqlBytes)
 
 		// Start a transaction
 		tx, err := db.Begin()
 		if err != nil {
-			log.Fatalf("Error starting transaction: %v", err)
+			log.Printf("Error starting transaction: %v", err)
+			failedCount++
+			continue
 		}
 
 		// Execute the migration
-		_, err = tx.Exec(string(sql))
+		_, err = tx.Exec(sql)
 		if err != nil {
 			tx.Rollback()
-			log.Fatalf("Error executing migration %s: %v", file, err)
+			log.Printf("Error executing migration %s: %v", file, err)
+			failedCount++
+			continue
 		}
 
 		// Remove the migration record
 		_, err = tx.Exec("DELETE FROM migrations WHERE name = $1", migrationName)
 		if err != nil {
 			tx.Rollback()
-			log.Fatalf("Error removing migration record %s: %v", migrationName, err)
+			log.Printf("Error removing migration record %s: %v", migrationName, err)
+			failedCount++
+			continue
 		}
 
 		// Commit the transaction
 		err = tx.Commit()
 		if err != nil {
-			log.Fatalf("Error committing transaction: %v", err)
+			log.Printf("Error committing transaction: %v", err)
+			failedCount++
+			continue
 		}
 
 		fmt.Printf("Migration %s reverted successfully\n", migrationName)
+		successCount++
 	}
-}
 
-func getEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
+	fmt.Printf("\nMigration summary: %d successful, %d skipped, %d failed\n",
+		successCount, skippedCount, failedCount)
 }

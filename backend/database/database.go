@@ -41,10 +41,8 @@ func InitDB(cfg *config.Config) error {
 		&models.Car{},
 		&models.Booking{},
 		&models.Owner{},
-		&models.CarLocation{},
 		&models.CarRentalInfo{},
 		&models.CarMedia{},
-		&models.CarDocument{},
 		&models.CarStatus{},
 	)
 	if err != nil {

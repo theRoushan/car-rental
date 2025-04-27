@@ -69,9 +69,9 @@ func CreateBooking(c *fiber.Ctx) error {
 	hours := req.EndTime.Sub(req.StartTime).Hours()
 	var totalPrice float64
 
-	if hours <= 24 && car.RentalInfo.RentalPricePerHour != nil {
+	if hours <= 24 {
 		// Use hourly rate for bookings less than 24 hours
-		totalPrice = hours * *car.RentalInfo.RentalPricePerHour
+		totalPrice = hours * car.RentalInfo.RentalPricePerHour
 	} else {
 		// Use daily rate for bookings more than 24 hours
 		days := hours / 24

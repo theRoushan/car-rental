@@ -5,7 +5,6 @@ import (
 	"car-rental-backend/models"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -28,10 +27,8 @@ func (s *CarService) GetCarByID(id uuid.UUID) (*models.Car, error) {
 	var car models.Car
 
 	err := s.db.Preload("Owner").
-		Preload("Location").
 		Preload("RentalInfo").
 		Preload("Media").
-		Preload("Documents").
 		Preload("CurrentStatus").
 		First(&car, "id = ?", id).Error
 
@@ -50,10 +47,8 @@ func (s *CarService) GetAllCars() ([]models.Car, error) {
 	var cars []models.Car
 
 	err := s.db.Preload("Owner").
-		Preload("Location").
 		Preload("RentalInfo").
 		Preload("Media").
-		Preload("Documents").
 		Preload("CurrentStatus").
 		Find(&cars).Error
 
@@ -71,10 +66,8 @@ func (s *CarService) GetAvailableCars() ([]models.Car, error) {
 	err := s.db.Joins("JOIN car_statuses ON car_statuses.car_id = cars.id").
 		Where("car_statuses.is_available = ?", true).
 		Preload("Owner").
-		Preload("Location").
 		Preload("RentalInfo").
 		Preload("Media").
-		Preload("Documents").
 		Preload("CurrentStatus").
 		Find(&cars).Error
 
@@ -85,13 +78,13 @@ func (s *CarService) GetAvailableCars() ([]models.Car, error) {
 	return cars, nil
 }
 
-// CreateCar creates a new car with all its related data
-func (s *CarService) CreateCar(car *models.Car, owner *models.Owner, location *models.CarLocation,
-	rentalInfo *models.CarRentalInfo, media []models.CarMedia, documents []models.CarDocument,
+// CreateCarWithoutDocAndLoc creates a new car without documents and location
+func (s *CarService) CreateCarWithoutDocAndLoc(car *models.Car, ownerID uuid.UUID,
+	rentalInfo *models.CarRentalInfo, media []models.CarMedia,
 	status *models.CarStatus) (*models.Car, error) {
 
 	// Input validation
-	if car == nil || owner == nil || location == nil || rentalInfo == nil || status == nil {
+	if car == nil || rentalInfo == nil || status == nil {
 		return nil, errors.New("all required entities must be provided")
 	}
 
@@ -119,14 +112,12 @@ func (s *CarService) CreateCar(car *models.Car, owner *models.Owner, location *m
 		return nil, fmt.Errorf("vehicle number %s already exists", car.VehicleNumber)
 	}
 
-	// Check if owner exists, if not create it
+	// Check if owner exists
 	var existingOwner models.Owner
-	if err := tx.Where("id = ?", owner.ID).First(&existingOwner).Error; err != nil {
+	if err := tx.Where("id = ?", ownerID).First(&existingOwner).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			if err := tx.Create(owner).Error; err != nil {
-				tx.Rollback()
-				return nil, fmt.Errorf("failed to create owner: %w", err)
-			}
+			tx.Rollback()
+			return nil, fmt.Errorf("owner with ID %s does not exist", ownerID)
 		} else {
 			tx.Rollback()
 			return nil, fmt.Errorf("failed to check owner existence: %w", err)
@@ -134,7 +125,7 @@ func (s *CarService) CreateCar(car *models.Car, owner *models.Owner, location *m
 	}
 
 	// Set the owner ID in the car
-	car.OwnerID = owner.ID
+	car.OwnerID = ownerID
 
 	// Create the car
 	if err := tx.Create(car).Error; err != nil {
@@ -143,7 +134,6 @@ func (s *CarService) CreateCar(car *models.Car, owner *models.Owner, location *m
 	}
 
 	// Set the car ID in related entities
-	location.CarID = car.ID
 	rentalInfo.CarID = car.ID
 	status.CarID = car.ID
 
@@ -151,38 +141,22 @@ func (s *CarService) CreateCar(car *models.Car, owner *models.Owner, location *m
 		media[i].CarID = car.ID
 	}
 
-	for i := range documents {
-		documents[i].CarID = car.ID
-	}
-
 	// Create related entities
-	if err := tx.Create(location).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to create car location: %w", err)
-	}
-
 	if err := tx.Create(rentalInfo).Error; err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("failed to create car rental info: %w", err)
+		return nil, fmt.Errorf("failed to create rental info: %w", err)
+	}
+
+	for _, m := range media {
+		if err := tx.Create(&m).Error; err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("failed to create media: %w", err)
+		}
 	}
 
 	if err := tx.Create(status).Error; err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("failed to create car status: %w", err)
-	}
-
-	if len(media) > 0 {
-		if err := tx.Create(&media).Error; err != nil {
-			tx.Rollback()
-			return nil, fmt.Errorf("failed to create car media: %w", err)
-		}
-	}
-
-	if len(documents) > 0 {
-		if err := tx.Create(&documents).Error; err != nil {
-			tx.Rollback()
-			return nil, fmt.Errorf("failed to create car documents: %w", err)
-		}
+		return nil, fmt.Errorf("failed to create status: %w", err)
 	}
 
 	// Commit transaction
@@ -190,14 +164,13 @@ func (s *CarService) CreateCar(car *models.Car, owner *models.Owner, location *m
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Get the complete car with all relations
+	// Return the car with all relationships loaded
 	return s.GetCarByID(car.ID)
 }
 
-// UpdateCar updates a car and its related data
+// UpdateCar updates a car and its related entities
 func (s *CarService) UpdateCar(id uuid.UUID, carUpdates map[string]interface{},
-	locationUpdates map[string]interface{}, rentalInfoUpdates map[string]interface{},
-	statusUpdates map[string]interface{}) (*models.Car, error) {
+	rentalInfoUpdates map[string]interface{}, statusUpdates map[string]interface{}) (*models.Car, error) {
 
 	// Begin transaction
 	tx := s.db.Begin()
@@ -205,14 +178,6 @@ func (s *CarService) UpdateCar(id uuid.UUID, carUpdates map[string]interface{},
 	// Update car basic info if provided
 	if len(carUpdates) > 0 {
 		if err := tx.Model(&models.Car{}).Where("id = ?", id).Updates(carUpdates).Error; err != nil {
-			tx.Rollback()
-			return nil, err
-		}
-	}
-
-	// Update location if provided
-	if len(locationUpdates) > 0 {
-		if err := tx.Model(&models.CarLocation{}).Where("car_id = ?", id).Updates(locationUpdates).Error; err != nil {
 			tx.Rollback()
 			return nil, err
 		}
@@ -259,22 +224,12 @@ func (s *CarService) DeleteCar(id uuid.UUID) error {
 		return err
 	}
 
-	if err := tx.Where("car_id = ?", id).Delete(&models.CarDocument{}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
 	if err := tx.Where("car_id = ?", id).Delete(&models.CarMedia{}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	if err := tx.Where("car_id = ?", id).Delete(&models.CarRentalInfo{}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	if err := tx.Where("car_id = ?", id).Delete(&models.CarLocation{}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -358,33 +313,11 @@ func (s *CarService) RemoveCarMedia(mediaID uuid.UUID) error {
 	return s.db.Delete(&models.CarMedia{}, mediaID).Error
 }
 
-// AddCarDocument adds a new document to a car
-func (s *CarService) AddCarDocument(carID uuid.UUID, documentType string, documentPath string, permitType models.PermitType, expiryDate *time.Time) error {
-	document := models.CarDocument{
-		CarID:        carID,
-		DocumentType: documentType,
-		DocumentPath: documentPath,
-		PermitType:   permitType,
-		ExpiryDate:   expiryDate,
-	}
-
-	return s.db.Create(&document).Error
-}
-
-// UpdateDocumentExpiry updates the expiry date of a document
-func (s *CarService) UpdateDocumentExpiry(documentID uuid.UUID, expiryDate time.Time) error {
-	return s.db.Model(&models.CarDocument{}).Where("id = ?", documentID).Update("expiry_date", expiryDate).Error
-}
-
 // SearchCars searches for cars based on various criteria
-func (s *CarService) SearchCars(make, model, location string, isAvailable *bool, minPrice, maxPrice *float64) ([]models.Car, error) {
+func (s *CarService) SearchCars(make, model string, isAvailable *bool, minPrice, maxPrice *float64) ([]models.Car, error) {
 	query := s.db.Model(&models.Car{})
 
 	// Join related tables if needed
-	if location != "" || isAvailable != nil || minPrice != nil || maxPrice != nil {
-		query = query.Joins("LEFT JOIN car_locations ON car_locations.car_id = cars.id")
-	}
-
 	if isAvailable != nil || minPrice != nil || maxPrice != nil {
 		query = query.Joins("LEFT JOIN car_statuses ON car_statuses.car_id = cars.id")
 	}
@@ -400,10 +333,6 @@ func (s *CarService) SearchCars(make, model, location string, isAvailable *bool,
 
 	if model != "" {
 		query = query.Where("cars.model ILIKE ?", "%"+model+"%")
-	}
-
-	if location != "" {
-		query = query.Where("car_locations.current_location ILIKE ?", "%"+location+"%")
 	}
 
 	if isAvailable != nil {
@@ -422,10 +351,8 @@ func (s *CarService) SearchCars(make, model, location string, isAvailable *bool,
 	var cars []models.Car
 	err := query.
 		Preload("Owner").
-		Preload("Location").
 		Preload("RentalInfo").
 		Preload("Media").
-		Preload("Documents").
 		Preload("CurrentStatus").
 		Find(&cars).Error
 
@@ -457,108 +384,4 @@ func (s *CarService) OwnerExists(ownerID uuid.UUID) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-// CreateCarWithOwnerID creates a new car with all its related data using only the owner ID
-func (s *CarService) CreateCarWithOwnerID(car *models.Car, ownerID uuid.UUID, location *models.CarLocation,
-	rentalInfo *models.CarRentalInfo, media []models.CarMedia, documents []models.CarDocument,
-	status *models.CarStatus) (*models.Car, error) {
-
-	// Input validation
-	if car == nil || location == nil || rentalInfo == nil || status == nil {
-		return nil, errors.New("all required entities must be provided")
-	}
-
-	// Check if owner exists
-	exists, err := s.OwnerExists(ownerID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check owner existence: %w", err)
-	}
-	if !exists {
-		return nil, fmt.Errorf("owner with ID %s does not exist", ownerID)
-	}
-
-	// Begin transaction
-	tx := s.db.Begin()
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
-	}
-
-	// Ensure we rollback on panics
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// Check if car with this vehicle number already exists
-	var count int64
-	if err := tx.Model(&models.Car{}).Where("vehicle_number = ?", car.VehicleNumber).Count(&count).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to check for duplicate vehicle number: %w", err)
-	}
-	if count > 0 {
-		tx.Rollback()
-		return nil, fmt.Errorf("vehicle number %s already exists", car.VehicleNumber)
-	}
-
-	// Set the owner ID in the car
-	car.OwnerID = ownerID
-
-	// Create the car
-	if err := tx.Create(car).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to create car: %w", err)
-	}
-
-	// Set the car ID in related entities
-	location.CarID = car.ID
-	rentalInfo.CarID = car.ID
-	status.CarID = car.ID
-
-	for i := range media {
-		media[i].CarID = car.ID
-	}
-
-	for i := range documents {
-		documents[i].CarID = car.ID
-	}
-
-	// Create related entities
-	if err := tx.Create(location).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to create car location: %w", err)
-	}
-
-	if err := tx.Create(rentalInfo).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to create car rental info: %w", err)
-	}
-
-	if err := tx.Create(status).Error; err != nil {
-		tx.Rollback()
-		return nil, fmt.Errorf("failed to create car status: %w", err)
-	}
-
-	if len(media) > 0 {
-		if err := tx.Create(&media).Error; err != nil {
-			tx.Rollback()
-			return nil, fmt.Errorf("failed to create car media: %w", err)
-		}
-	}
-
-	if len(documents) > 0 {
-		if err := tx.Create(&documents).Error; err != nil {
-			tx.Rollback()
-			return nil, fmt.Errorf("failed to create car documents: %w", err)
-		}
-	}
-
-	// Commit transaction
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	// Get the complete car with all relations
-	return s.GetCarByID(car.ID)
 }

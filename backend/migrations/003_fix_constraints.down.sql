@@ -1,2 +1,0 @@
--- This is a no-op down migration since the up migration is just fixing an issue
--- No need to revert anything as the constraint is properly defined in the model 
