@@ -16,6 +16,15 @@ class LoadCars extends CarEvent {
   List<Object?> get props => [page, limit];
 }
 
+class LoadMoreCars extends CarEvent {
+  final int limit;
+
+  LoadMoreCars({this.limit = 10});
+
+  @override
+  List<Object?> get props => [limit];
+}
+
 class LoadCar extends CarEvent {
   final String id;
 

@@ -5,13 +5,49 @@ import '../bloc/car_event.dart';
 import '../bloc/car_state.dart';
 import '../models/car.dart';
 
-class CarListScreen extends StatelessWidget {
+class CarListScreen extends StatefulWidget {
   const CarListScreen({super.key});
+
+  @override
+  State<CarListScreen> createState() => _CarListScreenState();
+}
+
+class _CarListScreenState extends State<CarListScreen> {
+  final ScrollController _scrollController = ScrollController();
+  
+  @override
+  void initState() {
+    super.initState();
+    // Load initial cars
+    context.read<CarBloc>().add(LoadCars());
+    
+    // Add scroll listener for pagination
+    _scrollController.addListener(_onScroll);
+  }
+  
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+  
+  void _onScroll() {
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    
+    // If we're near the bottom (within 200 pixels), load more items
+    if (maxScroll - currentScroll <= 200) {
+      final carState = context.read<CarBloc>().state;
+      if (carState is CarsLoaded && carState.hasNextPage && !carState.isLoadingMore) {
+        context.read<CarBloc>().add(LoadMoreCars());
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-     
       body: Column(
         children: [
           // Filter/Search Bar
@@ -33,7 +69,6 @@ class CarListScreen extends StatelessWidget {
                     },
                   ),
                 ),
-                
               ],
             ),
           ),
@@ -73,12 +108,43 @@ class CarListScreen extends StatelessWidget {
                     return const Center(child: Text('No cars available'));
                   }
 
-                  return ListView.builder(
-                    itemCount: state.cars.length,
-                    itemBuilder: (context, index) {
-                      final car = state.cars[index];
-                      return CarCard(car: car);
-                    },
+                  return Stack(
+                    children: [
+                      ListView.builder(
+                        controller: _scrollController,
+                        itemCount: state.cars.length + (state.isLoadingMore || state.hasNextPage ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          // If we've reached the end and there's more to load or we're loading more
+                          if (index >= state.cars.length) {
+                            return state.isLoadingMore 
+                              ? const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  child: Center(child: CircularProgressIndicator()),
+                                )
+                              : const SizedBox.shrink(); // Just to hold the space for pagination
+                          }
+                          
+                          final car = state.cars[index];
+                          return CarCard(car: car);
+                        },
+                      ),
+                      
+                      // Loading overlay for pagination
+                      if (state.isLoadingMore)
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            height: 80,
+                            color: Colors.black.withOpacity(0.1),
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                        ),
+                      
+                    ],
                   );
                 }
 
@@ -86,7 +152,6 @@ class CarListScreen extends StatelessWidget {
               },
             ),
           ),
-
         ],
       ),
       floatingActionButton: FloatingActionButton(

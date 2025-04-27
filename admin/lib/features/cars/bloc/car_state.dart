@@ -15,8 +15,36 @@ class CarLoading extends CarState {}
 class CarsLoaded extends CarState {
   final List<Car> cars;
   final bool hasNextPage;
+  final int currentPage;
+  final int totalPages;
+  final bool isLoadingMore;
 
-  CarsLoaded({required this.cars, required this.hasNextPage});
+  const CarsLoaded({
+    required this.cars, 
+    required this.hasNextPage, 
+    this.currentPage = 1, 
+    this.totalPages = 1,
+    this.isLoadingMore = false,
+  });
+
+  @override
+  List<Object?> get props => [cars, hasNextPage, currentPage, totalPages, isLoadingMore];
+
+  CarsLoaded copyWith({
+    List<Car>? cars,
+    bool? hasNextPage,
+    int? currentPage,
+    int? totalPages,
+    bool? isLoadingMore,
+  }) {
+    return CarsLoaded(
+      cars: cars ?? this.cars,
+      hasNextPage: hasNextPage ?? this.hasNextPage,
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
 }
 
 class CarLoaded extends CarState {
