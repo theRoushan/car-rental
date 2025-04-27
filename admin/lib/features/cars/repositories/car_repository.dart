@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../models/car.dart';
+import '../models/paginated_car_list.dart';
 import '../../../core/models/api_response.dart';
 
 class CarRepository {
@@ -12,22 +13,25 @@ class CarRepository {
   })  : _dio = dio,
         _baseUrl = baseUrl;
 
-  Future<List<Car>> getCars() async {
+  Future<PaginatedCarList> getCars({int page = 1, int limit = 10}) async {
     try {
-      final response = await _dio.get('$_baseUrl/api/cars');
-      final apiResponse = ApiResponse<List<dynamic>>.fromJsonAsList(
-        response.data,
-        (json) => json.map((item) => Car.fromJson(item as Map<String, dynamic>)).toList(),
+      final response = await _dio.get(
+        '$_baseUrl/api/cars',
+        queryParameters: {'page': page, 'limit': limit},
       );
-      
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json,
+      );
+
       if (!apiResponse.success) {
         throw Exception(apiResponse.message ?? 'Failed to fetch cars');
       }
       if (apiResponse.data == null) {
-        return [];
+        throw Exception('No data returned');
       }
 
-      return apiResponse.data! as List<Car>;
+      return PaginatedCarList.fromJson(apiResponse.data!);
     } catch (e) {
       throw Exception('Failed to fetch cars: ${e.toString()}');
     }
@@ -38,7 +42,7 @@ class CarRepository {
       final response = await _dio.get('$_baseUrl/cars/$id');
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json as Map<String, dynamic>,
+        (json) => json,
       );
       
       if (!apiResponse.success) {
@@ -63,7 +67,7 @@ class CarRepository {
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json as Map<String, dynamic>,
+        (json) => json ,
       );
       
       if (!apiResponse.success) {
@@ -88,7 +92,7 @@ class CarRepository {
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json as Map<String, dynamic>,
+        (json) => json,
       );
       
       if (!apiResponse.success) {
@@ -129,7 +133,7 @@ class CarRepository {
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json as Map<String, dynamic>,
+        (json) => json ,
       );
       
       if (!apiResponse.success) {
@@ -154,7 +158,7 @@ class CarRepository {
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json as Map<String, dynamic>,
+        (json) => json,
       );
       
       if (!apiResponse.success) {
@@ -194,7 +198,7 @@ class CarRepository {
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
-        (json) => json as Map<String, dynamic>,
+        (json) => json ,
       );
       
       if (!apiResponse.success) {
@@ -211,4 +215,4 @@ class CarRepository {
       throw Exception('Failed to filter cars: ${e.toString()}');
     }
   }
-} 
+}

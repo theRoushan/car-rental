@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"car-rental-backend/models"
 	"errors"
 	"fmt"
 	"strings"
@@ -148,4 +149,23 @@ func extractFieldFromConstraint(constraint string) string {
 		}
 	}
 	return "value" // Default fallback
+}
+
+// PaginatedSuccessResponse creates a successful API response with pagination
+func PaginatedSuccessResponse(c *fiber.Ctx, items interface{}, pagination models.Pagination, message string) error {
+	statusCode := fiber.StatusOK
+
+	paginatedData := models.PaginatedResponse{
+		Items:      items,
+		Pagination: pagination,
+	}
+
+	response := ApiResponse{
+		Success:    true,
+		Message:    message,
+		Data:       paginatedData,
+		StatusCode: statusCode,
+	}
+
+	return c.Status(statusCode).JSON(response)
 }

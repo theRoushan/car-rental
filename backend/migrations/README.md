@@ -5,8 +5,8 @@ This directory contains database migration files for the car rental application.
 ## Migration Files
 
 Each migration consists of two files:
-- `<name>.up.sql`: Contains the SQL to apply the migration
-- `<name>.down.sql`: Contains the SQL to revert the migration
+- `<n>.up.sql`: Contains the SQL to apply the migration
+- `<n>.down.sql`: Contains the SQL to revert the migration
 
 ## Current Migrations
 

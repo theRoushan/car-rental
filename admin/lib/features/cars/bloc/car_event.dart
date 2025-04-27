@@ -1,19 +1,25 @@
+import 'package:car_rental_admin/core/models/car.dart';
 import 'package:equatable/equatable.dart';
-import '../models/car.dart';
 
 abstract class CarEvent extends Equatable {
-  const CarEvent();
-
   @override
   List<Object?> get props => [];
 }
 
-class LoadCars extends CarEvent {}
+class LoadCars extends CarEvent {
+  final int page;
+  final int limit;
+
+  LoadCars({this.page = 1, this.limit = 10});
+
+  @override
+  List<Object?> get props => [page, limit];
+}
 
 class LoadCar extends CarEvent {
   final String id;
 
-  const LoadCar(this.id);
+  LoadCar(this.id);
 
   @override
   List<Object?> get props => [id];
@@ -22,7 +28,7 @@ class LoadCar extends CarEvent {
 class AddCar extends CarEvent {
   final Car car;
 
-  const AddCar(this.car);
+   AddCar(this.car);
 
   @override
   List<Object?> get props => [car];
@@ -31,7 +37,7 @@ class AddCar extends CarEvent {
 class UpdateCar extends CarEvent {
   final Car car;
 
-  const UpdateCar(this.car);
+   UpdateCar(this.car);
 
   @override
   List<Object?> get props => [car];
@@ -40,7 +46,7 @@ class UpdateCar extends CarEvent {
 class DeleteCar extends CarEvent {
   final String id;
 
-  const DeleteCar(this.id);
+   DeleteCar(this.id);
 
   @override
   List<Object?> get props => [id];
@@ -50,7 +56,7 @@ class ToggleCarAvailability extends CarEvent {
   final String id;
   final bool isAvailable;
 
-  const ToggleCarAvailability({
+   ToggleCarAvailability({
     required this.id,
     required this.isAvailable,
   });
@@ -62,7 +68,7 @@ class ToggleCarAvailability extends CarEvent {
 class SearchCars extends CarEvent {
   final String query;
 
-  const SearchCars(this.query);
+   SearchCars(this.query);
 
   @override
   List<Object?> get props => [query];
@@ -76,7 +82,7 @@ class FilterCars extends CarEvent {
   final double? minPrice;
   final double? maxPrice;
 
-  const FilterCars({
+   FilterCars({
     this.brand,
     this.model,
     this.year,
@@ -94,4 +100,4 @@ class FilterCars extends CarEvent {
         minPrice,
         maxPrice,
       ];
-} 
+}

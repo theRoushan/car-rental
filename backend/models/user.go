@@ -9,7 +9,7 @@ import (
 type User struct {
 	Base
 	Name         string    `json:"name"`
-	Email        string    `gorm:"uniqueIndex" json:"email"`
+	Email        string    `gorm:"index:idx_users_email,unique,where:deleted_at IS NULL" json:"email"`
 	PasswordHash string    `json:"-"`
 	Bookings     []Booking `json:"bookings,omitempty"`
 }

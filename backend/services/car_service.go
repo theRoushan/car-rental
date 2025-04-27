@@ -385,3 +385,99 @@ func (s *CarService) OwnerExists(ownerID uuid.UUID) (bool, error) {
 	}
 	return true, nil
 }
+
+// GetAllCarsPaginated retrieves cars with pagination and optional filters
+func (s *CarService) GetAllCarsPaginated(page, pageSize int, filters map[string]interface{}) ([]models.Car, int64, error) {
+	var cars []models.Car
+	var totalItems int64
+	var loadBookings bool
+
+	// Start building the query
+	query := s.db.Model(&models.Car{})
+
+	// Apply filters if they exist
+	if filters != nil {
+		// Make - case insensitive partial match
+		if make, ok := filters["make"].(string); ok && make != "" {
+			query = query.Where("make ILIKE ?", "%"+make+"%")
+		}
+
+		// Model - case insensitive partial match
+		if model, ok := filters["model"].(string); ok && model != "" {
+			query = query.Where("model ILIKE ?", "%"+model+"%")
+		}
+
+		// Year - exact match
+		if year, ok := filters["year"].(int); ok && year > 0 {
+			query = query.Where("year = ?", year)
+		}
+
+		// Min Year - range
+		if minYear, ok := filters["min_year"].(int); ok && minYear > 0 {
+			query = query.Where("year >= ?", minYear)
+		}
+
+		// Max Year - range
+		if maxYear, ok := filters["max_year"].(int); ok && maxYear > 0 {
+			query = query.Where("year <= ?", maxYear)
+		}
+
+		// Fuel Type - exact match
+		if fuelType, ok := filters["fuel_type"].(string); ok && fuelType != "" {
+			query = query.Where("fuel_type = ?", fuelType)
+		}
+
+		// Transmission - exact match
+		if transmission, ok := filters["transmission"].(string); ok && transmission != "" {
+			query = query.Where("transmission = ?", transmission)
+		}
+
+		// Body Type - exact match
+		if bodyType, ok := filters["body_type"].(string); ok && bodyType != "" {
+			query = query.Where("body_type = ?", bodyType)
+		}
+
+		// Is Available - for filtering available cars
+		if isAvailable, ok := filters["is_available"].(bool); ok && isAvailable {
+			query = query.Joins("JOIN car_statuses ON car_statuses.car_id = cars.id").
+				Where("car_statuses.is_available = ?", true)
+		}
+
+		// Check if we need to load bookings
+		if _, ok := filters["load_bookings"]; ok {
+			loadBookings = true
+		}
+	}
+
+	// Count total items for pagination
+	if err := query.Count(&totalItems).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Apply pagination
+	offset := (page - 1) * pageSize
+	query = query.Offset(offset).Limit(pageSize)
+
+	// Apply ordering
+	query = query.Order("created_at DESC")
+
+	// Build the preload query based on needs
+	preloadQuery := query.Preload("Owner").
+		Preload("RentalInfo").
+		Preload("Media").
+		Preload("CurrentStatus")
+
+	// Conditionally preload bookings
+	if loadBookings {
+		preloadQuery = preloadQuery.Preload("Bookings")
+	}
+
+	// Execute the query with preloaded relationships
+	err := preloadQuery.Find(&cars).Error
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return cars, totalItems, nil
+}

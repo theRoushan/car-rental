@@ -14,11 +14,9 @@ class CarLoading extends CarState {}
 
 class CarsLoaded extends CarState {
   final List<Car> cars;
+  final bool hasNextPage;
 
-  const CarsLoaded(this.cars);
-
-  @override
-  List<Object?> get props => [cars];
+  CarsLoaded({required this.cars, required this.hasNextPage});
 }
 
 class CarLoaded extends CarState {
@@ -50,4 +48,4 @@ class CarOperationSuccess extends CarState {
 
   @override
   List<Object?> get props => [message, car];
-} 
+}

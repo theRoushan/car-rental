@@ -57,7 +57,7 @@ type CarStatus struct {
 	CarID                  uuid.UUID `json:"-" gorm:"index"`
 	IsAvailable            bool      `json:"is_available" gorm:"default:true"`
 	CurrentOdometerReading float64   `json:"current_odometer_reading"`
-	DamagesOrIssues        []string  `json:"damages_or_issues,omitempty" gorm:"type:jsonb"`
+	DamagesOrIssues        []string  `json:"damages_or_issues,omitempty" gorm:"type:jsonb;serializer:json"`
 }
 
 // Owner represents a car owner entity

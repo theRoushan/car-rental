@@ -221,12 +221,31 @@ func CreateCar(c *fiber.Ctx) error {
 }
 
 func GetCars(c *fiber.Ctx) error {
+	// Get pagination parameters from request
+	page, pageSize := utils.GetPaginationParams(c)
+
+	// Get filter parameters
+	filters := map[string]interface{}{
+		"make":         utils.GetStringParam(c, "make"),
+		"model":        utils.GetStringParam(c, "model"),
+		"year":         utils.GetIntParam(c, "year", 0),
+		"min_year":     utils.GetIntParam(c, "min_year", 0),
+		"max_year":     utils.GetIntParam(c, "max_year", 0),
+		"fuel_type":    utils.GetStringParam(c, "fuel_type"),
+		"transmission": utils.GetStringParam(c, "transmission"),
+		"body_type":    utils.GetStringParam(c, "body_type"),
+	}
+
 	carService := services.NewCarService()
 
-	cars, err := carService.GetAllCars()
+	// Get paginated cars with filters
+	cars, totalItems, err := carService.GetAllCarsPaginated(page, pageSize, filters)
 	if err != nil {
 		return utils.ServerErrorResponse(c, "Failed to fetch cars: "+err.Error())
 	}
+
+	// Create pagination metadata
+	pagination := models.NewPagination(totalItems, page, pageSize)
 
 	// Convert cars to response format
 	var responses []models.CarResponse
@@ -234,7 +253,7 @@ func GetCars(c *fiber.Ctx) error {
 		responses = append(responses, car.ToCarResponse())
 	}
 
-	return utils.SuccessResponse(c, responses, "Cars fetched successfully")
+	return utils.PaginatedSuccessResponse(c, responses, pagination, "Cars fetched successfully")
 }
 
 func GetCar(c *fiber.Ctx) error {
@@ -442,24 +461,46 @@ func DeleteCar(c *fiber.Ctx) error {
 }
 
 func GetAvailableCars(c *fiber.Ctx) error {
+	// Get pagination parameters from request
+	page, pageSize := utils.GetPaginationParams(c)
+
 	startTime := c.Query("start")
 	endTime := c.Query("end")
 
+	// Get filter parameters (same as GetCars)
+	filters := map[string]interface{}{
+		"make":         utils.GetStringParam(c, "make"),
+		"model":        utils.GetStringParam(c, "model"),
+		"year":         utils.GetIntParam(c, "year", 0),
+		"min_year":     utils.GetIntParam(c, "min_year", 0),
+		"max_year":     utils.GetIntParam(c, "max_year", 0),
+		"fuel_type":    utils.GetStringParam(c, "fuel_type"),
+		"transmission": utils.GetStringParam(c, "transmission"),
+		"body_type":    utils.GetStringParam(c, "body_type"),
+	}
+
+	carService := services.NewCarService()
+
 	if startTime == "" || endTime == "" {
-		// If no time range specified, just get all available cars
-		carService := services.NewCarService()
-		availableCars, err := carService.GetAvailableCars()
+		// Add the isAvailable filter
+		filters["is_available"] = true
+
+		// Get paginated cars with filters
+		cars, totalItems, err := carService.GetAllCarsPaginated(page, pageSize, filters)
 		if err != nil {
 			return utils.ServerErrorResponse(c, "Failed to fetch available cars: "+err.Error())
 		}
 
-		// Convert to response format
+		// Create pagination metadata
+		pagination := models.NewPagination(totalItems, page, pageSize)
+
+		// Convert cars to response format
 		var responses []models.CarResponse
-		for _, car := range availableCars {
+		for _, car := range cars {
 			responses = append(responses, car.ToCarResponse())
 		}
 
-		return utils.SuccessResponse(c, responses, "Available cars fetched successfully")
+		return utils.PaginatedSuccessResponse(c, responses, pagination, "Available cars fetched successfully")
 	}
 
 	// Parse time range for booking availability check
@@ -477,10 +518,12 @@ func GetAvailableCars(c *fiber.Ctx) error {
 		return utils.ValidationErrorResponse(c, "End time must be after start time", []string{"Invalid time range"})
 	}
 
-	// Use a custom query to find cars available for booking in the specified time range
-	carService := services.NewCarService()
-	isAvailable := true
-	cars, err := carService.SearchCars("", "", &isAvailable, nil, nil)
+	// Add isAvailable filter and load bookings for time range check
+	filters["is_available"] = true
+	filters["load_bookings"] = true
+
+	// Get available cars with filtering and pagination
+	cars, _, err := carService.GetAllCarsPaginated(page, pageSize, filters)
 	if err != nil {
 		return utils.ServerErrorResponse(c, "Failed to fetch available cars: "+err.Error())
 	}
@@ -502,11 +545,17 @@ func GetAvailableCars(c *fiber.Ctx) error {
 		}
 	}
 
-	// Convert to response format
+	// Adjust total items count after filtering
+	filteredTotalItems := int64(len(availableCars))
+
+	// Create pagination metadata based on filtered results
+	pagination := models.NewPagination(filteredTotalItems, page, pageSize)
+
+	// Convert cars to response format
 	var responses []models.CarResponse
 	for _, car := range availableCars {
 		responses = append(responses, car.ToCarResponse())
 	}
 
-	return utils.SuccessResponse(c, responses, "Available cars fetched successfully")
+	return utils.PaginatedSuccessResponse(c, responses, pagination, "Available cars fetched successfully")
 }
