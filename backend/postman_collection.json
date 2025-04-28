@@ -334,6 +334,68 @@
 						},
 						"description": "Cancel a booking"
 					}
+				},
+				{
+					"name": "Get All Bookings (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/api/bookings?page=1&limit=10&status=BOOKED&start_date=2024-01-01T00:00:00Z&end_date=2024-12-31T23:59:59Z",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"bookings"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "BOOKED",
+									"description": "Filter by booking status"
+								},
+								{
+									"key": "start_date",
+									"value": "2024-01-01T00:00:00Z",
+									"description": "Filter by start date"
+								},
+								{
+									"key": "end_date",
+									"value": "2024-12-31T23:59:59Z",
+									"description": "Filter by end date"
+								},
+								{
+									"key": "car_id",
+									"value": "{{car_id}}",
+									"description": "Filter by car ID",
+									"disabled": true
+								},
+								{
+									"key": "user_id",
+									"value": "{{user_id}}",
+									"description": "Filter by user ID",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all bookings in the system (admin only)"
+					}
 				}
 			]
 		},

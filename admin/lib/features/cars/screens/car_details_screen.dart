@@ -1,6 +1,7 @@
+import 'package:car_rental_admin/features/cars/models/car.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/models/car.dart';
+
 import '../../../core/services/api_service.dart';
 
 class CarDetailsScreen extends StatefulWidget {
@@ -48,7 +49,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Car'),
-        content: Text('Are you sure you want to delete ${car.name}?'),
+        content: Text('Are you sure you want to delete ${car.make}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -96,7 +97,7 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(car.name),
+        title: Text(car.make),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -131,13 +132,13 @@ class _CarDetailsScreenState extends State<CarDetailsScreen> {
                         children: [
                           _buildInfoRow('Model', car.model),
                           const Divider(),
-                          _buildInfoRow('License Plate', car.licensePlate),
+                          _buildInfoRow('License Plate', car.vehicleNumber),
                           const Divider(),
-                          _buildInfoRow('Location', car.location),
+                          _buildInfoRow('Location', car.ownerContact),
                           const Divider(),
                           _buildInfoRow(
                             'Hourly Rate',
-                            '\$${car.hourlyRate.toStringAsFixed(2)}/hr',
+                            '\$${car..rentalPricePerHour.toStringAsFixed(2)}/hr',
                           ),
                           const Divider(),
                           _buildInfoRow(

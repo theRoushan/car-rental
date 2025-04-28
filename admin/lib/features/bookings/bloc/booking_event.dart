@@ -11,6 +11,19 @@ class LoadBookings extends BookingEvent {
   const LoadBookings();
 }
 
+class RefreshBookings extends BookingEvent {
+  const RefreshBookings();
+}
+
+class LoadMoreBookings extends BookingEvent {
+  final int page;
+  
+  const LoadMoreBookings(this.page);
+  
+  @override
+  List<Object?> get props => [page];
+}
+
 class LoadBookingDetails extends BookingEvent {
   final String bookingId;
   

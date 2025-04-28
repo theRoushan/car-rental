@@ -1,6 +1,7 @@
+import 'package:car_rental_admin/features/cars/models/car.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/models/car.dart';
+
 import '../../../core/services/api_service.dart';
 
 class CarFormScreen extends StatefulWidget {
@@ -30,11 +31,11 @@ class _CarFormScreenState extends State<CarFormScreen> {
       if (car != null) {
         _isEditMode = true;
         _carId = car.id;
-        _nameController.text = car.name;
+        _nameController.text = car.ownerName;
         _modelController.text = car.model;
-        _licensePlateController.text = car.licensePlate;
-        _locationController.text = car.location;
-        _hourlyRateController.text = car.hourlyRate.toString();
+        _licensePlateController.text = car.vehicleNumber;
+        _locationController.text = car.ownerContact;
+        _hourlyRateController.text = car.rentalPricePerHour.toString();
         setState(() {
           _isAvailable = car.isAvailable;
         });

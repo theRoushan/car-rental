@@ -1,18 +1,20 @@
-import 'car.dart';
 
-class PaginatedCarList {
-  final List<Car> items;
+class PaginatedList<T> {
+  final List<T> items;
   final Pagination pagination;
 
-  PaginatedCarList({
+  PaginatedList({
     required this.items,
     required this.pagination,
   });
 
-  factory PaginatedCarList.fromJson(Map<String, dynamic> json) {
-    return PaginatedCarList(
+  factory PaginatedList.fromJson(
+    Map<String, dynamic> json,
+    T Function(Map<String, dynamic>) fromJsonT,
+  ) {
+    return PaginatedList(
       items: (json['items'] as List<dynamic>)
-          .map((item) => Car.fromJson(item as Map<String, dynamic>))
+          .map((item) => fromJsonT(item as Map<String, dynamic>))
           .toList(),
       pagination: Pagination.fromJson(json['pagination'] as Map<String, dynamic>),
     );

@@ -1,8 +1,6 @@
 import 'package:car_rental_admin/core/iconmoon_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../auth/bloc/auth_bloc.dart';
-import '../../auth/bloc/auth_event.dart';
 import '../../cars/bloc/car_bloc.dart';
 import '../../cars/bloc/car_event.dart';
 import '../../cars/screens/car_list_screen.dart';
@@ -11,7 +9,6 @@ import '../../bookings/bloc/booking_event.dart';
 import '../../bookings/screens/booking_list_screen.dart';
 import '../../owners/bloc/owner_bloc.dart';
 import '../../owners/bloc/owner_event.dart';
-import '../../owners/screens/owner_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -38,24 +35,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text('Car Rental Admin'),
-      //   actions: [
-      //     IconButton(
-      //       icon: const Icon(Icons.logout),
-      //       onPressed: () {
-      //         context.read<AuthBloc>().add(LogoutRequested());
-      //       },
-      //     ),
-      //   ],
-      // ),
       body: SafeArea(
         child: IndexedStack(
           index: _selectedIndex,
           children: const [
             CarListScreen(),
             BookingListScreen(),
-            OwnerListScreen(),
+            // OwnerListScreen(),
             Center(child: Text('Settings')),
           ],
         ),
@@ -92,10 +78,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icon(Icomoon.booking, size: 20),
             label: 'Bookings',
           ),
-          NavigationDestination(
-            icon: Icon(Icomoon.holdingHandKey, size: 20),
-            label: 'Owners',
-          ),
+          // NavigationDestination(
+          //   icon: Icon(Icomoon.holdingHandKey, size: 20),
+          //   label: 'Owners',
+          // ),
           NavigationDestination(
             icon: Icon(Icomoon.settings, size: 20),
             label: 'Settings',

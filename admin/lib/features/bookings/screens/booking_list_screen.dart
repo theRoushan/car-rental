@@ -14,49 +14,102 @@ class BookingListScreen extends StatefulWidget {
 }
 
 class _BookingListScreenState extends State<BookingListScreen> {
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
     context.read<BookingBloc>().add(const LoadBookings());
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isBottomReached && !_isLoadingMore) {
+      final currentState = context.read<BookingBloc>().state;
+      if (currentState is BookingsLoaded && !currentState.hasReachedMax) {
+        setState(() {
+          _isLoadingMore = true;
+        });
+        context.read<BookingBloc>().add(LoadMoreBookings(currentState.currentPage + 1));
+      }
+    }
+  }
+
+  bool get _isBottomReached {
+    if (!_scrollController.hasClients) return false;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return currentScroll >= (maxScroll * 0.9);
+  }
+
+  Future<void> _onRefresh() async {
+    context.read<BookingBloc>().add(const RefreshBookings());
+    return Future.delayed(const Duration(seconds: 1));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: BlocBuilder<BookingBloc, BookingState>(
-        builder: (context, state) {
-          if (state is BookingLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          
-          if (state is BookingError) {
-            return Center(child: Text('Error: ${state.message}'));
-          }
-          
-          if (state is BookingsLoaded) {
-            return _buildBookingList(state.bookings);
-          }
-          
-          return const Center(child: Text('No bookings data'));
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Navigate to create booking screen
-        },
-        child: const Icon(Icons.add),
-      ),
+    return BlocConsumer<BookingBloc, BookingState>(
+      listener: (context, state) {
+        if (state is BookingsLoaded) {
+          setState(() {
+            _isLoadingMore = false;
+          });
+        }
+      },
+      builder: (context, state) {
+        if (state is BookingLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (state is BookingError) {
+          return Center(child: Text('Error: ${state.message}'));
+        }
+        
+        if (state is BookingsLoaded) {
+          return _buildRefreshableBookingList(state.bookings);
+        }
+
+        if (state is PaginationLoading) {
+          return _buildRefreshableBookingList(state.currentBookings, isLoadingMore: true);
+        }
+        
+        return const Center(child: Text('No bookings data'));
+      },
     );
   }
 
-  Widget _buildBookingList(List<Booking> bookings) {
-    if (bookings.isEmpty) {
-      return const Center(child: Text('No bookings available'));
-    }
-    
+  Widget _buildRefreshableBookingList(List<Booking> bookings, {bool isLoadingMore = false}) {
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      child: bookings.isEmpty
+          ? const Center(child: Text('No bookings available'))
+          : _buildBookingList(bookings, isLoadingMore: isLoadingMore),
+    );
+  }
+
+  Widget _buildBookingList(List<Booking> bookings, {bool isLoadingMore = false}) {
     return ListView.builder(
-      itemCount: bookings.length,
+      controller: _scrollController,
+      itemCount: isLoadingMore ? bookings.length + 1 : bookings.length,
       itemBuilder: (context, index) {
+        if (index >= bookings.length) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.0),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        
         final booking = bookings[index];
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

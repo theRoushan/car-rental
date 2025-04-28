@@ -17,13 +17,40 @@ class BookingLoading extends BookingState {
   const BookingLoading();
 }
 
+class PaginationLoading extends BookingState {
+  final List<Booking> currentBookings;
+  
+  const PaginationLoading(this.currentBookings);
+  
+  @override
+  List<Object?> get props => [currentBookings];
+}
+
 class BookingsLoaded extends BookingState {
   final List<Booking> bookings;
+  final bool hasReachedMax;
+  final int currentPage;
 
-  const BookingsLoaded(this.bookings);
+  const BookingsLoaded({
+    required this.bookings,
+    this.hasReachedMax = false,
+    this.currentPage = 1,
+  });
+
+  BookingsLoaded copyWith({
+    List<Booking>? bookings,
+    bool? hasReachedMax,
+    int? currentPage,
+  }) {
+    return BookingsLoaded(
+      bookings: bookings ?? this.bookings,
+      hasReachedMax: hasReachedMax ?? this.hasReachedMax,
+      currentPage: currentPage ?? this.currentPage,
+    );
+  }
 
   @override
-  List<Object?> get props => [bookings];
+  List<Object?> get props => [bookings, hasReachedMax, currentPage];
 }
 
 class BookingDetailsLoaded extends BookingState {

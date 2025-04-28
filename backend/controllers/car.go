@@ -226,14 +226,15 @@ func GetCars(c *fiber.Ctx) error {
 
 	// Get filter parameters
 	filters := map[string]interface{}{
-		"make":         utils.GetStringParam(c, "make"),
-		"model":        utils.GetStringParam(c, "model"),
-		"year":         utils.GetIntParam(c, "year", 0),
-		"min_year":     utils.GetIntParam(c, "min_year", 0),
-		"max_year":     utils.GetIntParam(c, "max_year", 0),
-		"fuel_type":    utils.GetStringParam(c, "fuel_type"),
-		"transmission": utils.GetStringParam(c, "transmission"),
-		"body_type":    utils.GetStringParam(c, "body_type"),
+		"make":           utils.GetStringParam(c, "make"),
+		"model":          utils.GetStringParam(c, "model"),
+		"vehicle_number": utils.GetStringParam(c, "vehicle_number"),
+		"year":           utils.GetIntParam(c, "year", 0),
+		"min_year":       utils.GetIntParam(c, "min_year", 0),
+		"max_year":       utils.GetIntParam(c, "max_year", 0),
+		"fuel_type":      utils.GetStringParam(c, "fuel_type"),
+		"transmission":   utils.GetStringParam(c, "transmission"),
+		"body_type":      utils.GetStringParam(c, "body_type"),
 	}
 
 	carService := services.NewCarService()
@@ -247,10 +248,12 @@ func GetCars(c *fiber.Ctx) error {
 	// Create pagination metadata
 	pagination := models.NewPagination(totalItems, page, pageSize)
 
-	// Convert cars to response format
+	// Convert cars to response format - with nil safety check
 	var responses []models.CarResponse
-	for _, car := range cars {
-		responses = append(responses, car.ToCarResponse())
+	if cars != nil {
+		for _, car := range cars {
+			responses = append(responses, car.ToCarResponse())
+		}
 	}
 
 	return utils.PaginatedSuccessResponse(c, responses, pagination, "Cars fetched successfully")
@@ -469,14 +472,15 @@ func GetAvailableCars(c *fiber.Ctx) error {
 
 	// Get filter parameters (same as GetCars)
 	filters := map[string]interface{}{
-		"make":         utils.GetStringParam(c, "make"),
-		"model":        utils.GetStringParam(c, "model"),
-		"year":         utils.GetIntParam(c, "year", 0),
-		"min_year":     utils.GetIntParam(c, "min_year", 0),
-		"max_year":     utils.GetIntParam(c, "max_year", 0),
-		"fuel_type":    utils.GetStringParam(c, "fuel_type"),
-		"transmission": utils.GetStringParam(c, "transmission"),
-		"body_type":    utils.GetStringParam(c, "body_type"),
+		"make":           utils.GetStringParam(c, "make"),
+		"model":          utils.GetStringParam(c, "model"),
+		"vehicle_number": utils.GetStringParam(c, "vehicle_number"),
+		"year":           utils.GetIntParam(c, "year", 0),
+		"min_year":       utils.GetIntParam(c, "min_year", 0),
+		"max_year":       utils.GetIntParam(c, "max_year", 0),
+		"fuel_type":      utils.GetStringParam(c, "fuel_type"),
+		"transmission":   utils.GetStringParam(c, "transmission"),
+		"body_type":      utils.GetStringParam(c, "body_type"),
 	}
 
 	carService := services.NewCarService()
@@ -494,10 +498,12 @@ func GetAvailableCars(c *fiber.Ctx) error {
 		// Create pagination metadata
 		pagination := models.NewPagination(totalItems, page, pageSize)
 
-		// Convert cars to response format
+		// Convert cars to response format - handle possible nil for safety
 		var responses []models.CarResponse
-		for _, car := range cars {
-			responses = append(responses, car.ToCarResponse())
+		if cars != nil {
+			for _, car := range cars {
+				responses = append(responses, car.ToCarResponse())
+			}
 		}
 
 		return utils.PaginatedSuccessResponse(c, responses, pagination, "Available cars fetched successfully")
@@ -528,16 +534,24 @@ func GetAvailableCars(c *fiber.Ctx) error {
 		return utils.ServerErrorResponse(c, "Failed to fetch available cars: "+err.Error())
 	}
 
+	// Safety check - ensure cars isn't nil before processing
+	if cars == nil {
+		cars = []models.Car{} // Use empty slice instead of nil
+	}
+
 	// Filter out cars that have bookings in the requested time range
 	var availableCars []models.Car
 	for _, car := range cars {
 		carIsAvailable := true
-		for _, booking := range car.Bookings {
-			// Check if booking overlaps with requested time range
-			if booking.Status == models.BookingStatusBooked &&
-				!(booking.EndTime.Before(start) || booking.StartTime.After(end)) {
-				carIsAvailable = false
-				break
+		// Safety check - ensure Bookings isn't nil
+		if car.Bookings != nil {
+			for _, booking := range car.Bookings {
+				// Check if booking overlaps with requested time range
+				if booking.Status == models.BookingStatusBooked &&
+					!(booking.EndTime.Before(start) || booking.StartTime.After(end)) {
+					carIsAvailable = false
+					break
+				}
 			}
 		}
 		if carIsAvailable {

@@ -394,52 +394,69 @@ func (s *CarService) GetAllCarsPaginated(page, pageSize int, filters map[string]
 
 	// Start building the query
 	query := s.db.Model(&models.Car{})
+	countQuery := s.db.Model(&models.Car{})
 
 	// Apply filters if they exist
 	if filters != nil {
 		// Make - case insensitive partial match
 		if make, ok := filters["make"].(string); ok && make != "" {
 			query = query.Where("make ILIKE ?", "%"+make+"%")
+			countQuery = countQuery.Where("make ILIKE ?", "%"+make+"%")
 		}
 
 		// Model - case insensitive partial match
 		if model, ok := filters["model"].(string); ok && model != "" {
 			query = query.Where("model ILIKE ?", "%"+model+"%")
+			countQuery = countQuery.Where("model ILIKE ?", "%"+model+"%")
+		}
+
+		// Vehicle Number - case insensitive partial match
+		if vehicleNumber, ok := filters["vehicle_number"].(string); ok && vehicleNumber != "" {
+			query = query.Where("vehicle_number ILIKE ?", "%"+vehicleNumber+"%")
+			countQuery = countQuery.Where("vehicle_number ILIKE ?", "%"+vehicleNumber+"%")
 		}
 
 		// Year - exact match
 		if year, ok := filters["year"].(int); ok && year > 0 {
 			query = query.Where("year = ?", year)
+			countQuery = countQuery.Where("year = ?", year)
 		}
 
 		// Min Year - range
 		if minYear, ok := filters["min_year"].(int); ok && minYear > 0 {
 			query = query.Where("year >= ?", minYear)
+			countQuery = countQuery.Where("year >= ?", minYear)
 		}
 
 		// Max Year - range
 		if maxYear, ok := filters["max_year"].(int); ok && maxYear > 0 {
 			query = query.Where("year <= ?", maxYear)
+			countQuery = countQuery.Where("year <= ?", maxYear)
 		}
 
 		// Fuel Type - exact match
 		if fuelType, ok := filters["fuel_type"].(string); ok && fuelType != "" {
 			query = query.Where("fuel_type = ?", fuelType)
+			countQuery = countQuery.Where("fuel_type = ?", fuelType)
 		}
 
 		// Transmission - exact match
 		if transmission, ok := filters["transmission"].(string); ok && transmission != "" {
 			query = query.Where("transmission = ?", transmission)
+			countQuery = countQuery.Where("transmission = ?", transmission)
 		}
 
 		// Body Type - exact match
 		if bodyType, ok := filters["body_type"].(string); ok && bodyType != "" {
 			query = query.Where("body_type = ?", bodyType)
+			countQuery = countQuery.Where("body_type = ?", bodyType)
 		}
 
 		// Is Available - for filtering available cars
 		if isAvailable, ok := filters["is_available"].(bool); ok && isAvailable {
 			query = query.Joins("JOIN car_statuses ON car_statuses.car_id = cars.id").
+				Where("car_statuses.is_available = ?", true)
+			countQuery = countQuery.Joins("JOIN car_statuses ON car_statuses.car_id = cars.id").
 				Where("car_statuses.is_available = ?", true)
 		}
 
@@ -449,8 +466,9 @@ func (s *CarService) GetAllCarsPaginated(page, pageSize int, filters map[string]
 		}
 	}
 
-	// Count total items for pagination
-	if err := query.Count(&totalItems).Error; err != nil {
+	// Count total items for pagination - use a simpler count query
+	// This avoids the slow query by using a more optimized count approach
+	if err := countQuery.Count(&totalItems).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -477,6 +495,11 @@ func (s *CarService) GetAllCarsPaginated(page, pageSize int, filters map[string]
 
 	if err != nil {
 		return nil, 0, err
+	}
+
+	// Safety check for empty results
+	if cars == nil {
+		cars = []models.Car{} // Return empty slice instead of nil to avoid nil pointer dereference
 	}
 
 	return cars, totalItems, nil

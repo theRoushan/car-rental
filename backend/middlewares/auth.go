@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"car-rental-backend/config"
+	"car-rental-backend/models"
 	"strings"
 	"time"
 
@@ -9,10 +10,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateToken(userID string, cfg *config.Config) (string, error) {
+func GenerateToken(userID string, role models.UserRole, cfg *config.Config) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": userID,
-		"exp":     time.Now().Add(time.Hour * time.Duration(cfg.JWTExpirationHours)).Unix(),
+		"user_id":   userID,
+		"user_role": string(role),
+		"exp":       time.Now().Add(time.Hour * time.Duration(cfg.JWTExpirationHours)).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -45,6 +47,14 @@ func AuthMiddleware(cfg *config.Config) fiber.Handler {
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 			userID := claims["user_id"].(string)
 			c.Locals("user_id", userID)
+
+			// Extract and set user role
+			if userRole, ok := claims["user_role"].(string); ok {
+				c.Locals("user_role", userRole)
+			} else {
+				c.Locals("user_role", string(models.UserRoleUser)) // Default to user role
+			}
+
 			return c.Next()
 		}
 

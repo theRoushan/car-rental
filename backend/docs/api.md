@@ -471,32 +471,75 @@ Retrieve all bookings for a specific user.
 ```json
 {
   "success": true,
-  "message": "User bookings retrieved successfully",
-  "data": {
-    "bookings": [
-      {
-        "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-        "car": {
-          "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-          "make": "Toyota",
-          "model": "Camry",
-          "year": 2023,
-          "color": "Silver",
-          "vehicle_number": "ABC123"
-        },
-        "start_time": "2023-04-20T10:00:00Z",
-        "end_time": "2023-04-25T10:00:00Z",
-        "status": "BOOKED",
-        "total_price": 250.00,
-        "created_at": "2023-04-19T12:00:00Z"
-      }
-    ],
-    "pagination": {
-      "current_page": 1,
-      "total_pages": 3,
-      "total_items": 25,
-      "limit": 10
+  "message": "User bookings fetched successfully",
+  "data": [
+    {
+      "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "user_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "car_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "start_time": "2023-04-20T10:00:00Z",
+      "end_time": "2023-04-25T10:00:00Z",
+      "status": "BOOKED",
+      "total_price": 250.00,
+      "created_at": "2023-04-19T12:00:00Z",
+      "updated_at": "2023-04-19T12:00:00Z"
     }
+  ]
+}
+```
+
+### Get All Bookings (Admin Only)
+
+Retrieve all bookings in the system (admin users only).
+
+- **URL**: `/api/bookings`
+- **Method**: `GET`
+- **Auth Required**: Yes (Admin only)
+
+**Query Parameters:**
+
+- `page` (optional): Page number for pagination (default: 1)
+- `limit` (optional): Number of items per page (default: 10)
+- `status` (optional): Filter by booking status ("BOOKED", "CANCELLED", "COMPLETED")
+- `start_date` (optional): Filter bookings with start time after this date (ISO format)
+- `end_date` (optional): Filter bookings with end time before this date (ISO format)
+- `car_id` (optional): Filter bookings for a specific car
+- `user_id` (optional): Filter bookings for a specific user
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "All bookings fetched successfully",
+  "data": [
+    {
+      "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "user_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "user": {
+        "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      "car_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+      "car": {
+        "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "make": "Toyota",
+        "model": "Camry"
+      },
+      "start_time": "2023-04-20T10:00:00Z",
+      "end_time": "2023-04-25T10:00:00Z",
+      "status": "BOOKED",
+      "total_price": 250.00,
+      "created_at": "2023-04-19T12:00:00Z",
+      "updated_at": "2023-04-19T12:00:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "page_size": 10,
+    "total_items": 25,
+    "total_pages": 3
   }
 }
 ```

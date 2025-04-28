@@ -18,6 +18,7 @@ class CarsLoaded extends CarState {
   final int currentPage;
   final int totalPages;
   final bool isLoadingMore;
+  final String? searchQuery;
 
   const CarsLoaded({
     required this.cars, 
@@ -25,10 +26,11 @@ class CarsLoaded extends CarState {
     this.currentPage = 1, 
     this.totalPages = 1,
     this.isLoadingMore = false,
+    this.searchQuery,
   });
 
   @override
-  List<Object?> get props => [cars, hasNextPage, currentPage, totalPages, isLoadingMore];
+  List<Object?> get props => [cars, hasNextPage, currentPage, totalPages, isLoadingMore, searchQuery];
 
   CarsLoaded copyWith({
     List<Car>? cars,
@@ -36,6 +38,7 @@ class CarsLoaded extends CarState {
     int? currentPage,
     int? totalPages,
     bool? isLoadingMore,
+    String? searchQuery,
   }) {
     return CarsLoaded(
       cars: cars ?? this.cars,
@@ -43,6 +46,7 @@ class CarsLoaded extends CarState {
       currentPage: currentPage ?? this.currentPage,
       totalPages: totalPages ?? this.totalPages,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 }

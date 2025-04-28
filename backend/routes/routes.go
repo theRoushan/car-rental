@@ -35,6 +35,7 @@ func SetupRoutes(app *fiber.App, cfg *config.Config) {
 	// Booking routes
 	bookings := api.Group("/bookings")
 	bookings.Post("/", controllers.CreateBooking)
+	bookings.Get("/", controllers.GetAllBookings)
 	bookings.Get("/:id", controllers.GetBooking)
 	bookings.Delete("/:id", controllers.CancelBooking)
 

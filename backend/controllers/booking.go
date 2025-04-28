@@ -46,7 +46,7 @@ func CreateBooking(c *fiber.Ctx) error {
 
 	// Check if car exists and is available
 	var car models.Car
-	if result := database.DB.Preload("CurrentStatus").First(&car, "id = ?", carID); result.Error != nil {
+	if result := database.DB.Preload("CurrentStatus").Preload("RentalInfo").First(&car, "id = ?", carID); result.Error != nil {
 		return utils.NotFoundResponse(c, "Car not found")
 	}
 
@@ -68,6 +68,10 @@ func CreateBooking(c *fiber.Ctx) error {
 	// Calculate total price
 	hours := req.EndTime.Sub(req.StartTime).Hours()
 	var totalPrice float64
+
+	if car.RentalInfo == nil {
+		return utils.ServerErrorResponse(c, "Car rental information is missing")
+	}
 
 	if hours <= 24 {
 		// Use hourly rate for bookings less than 24 hours
@@ -131,6 +135,77 @@ func GetUserBookings(c *fiber.Ctx) error {
 	}
 
 	return utils.SuccessResponse(c, bookings, "User bookings fetched successfully")
+}
+
+func GetAllBookings(c *fiber.Ctx) error {
+	// Check if user is admin
+	userRole := c.Locals("user_role").(string)
+	if userRole != "admin" {
+		return utils.ForbiddenResponse(c, "Only admin users can access this resource")
+	}
+
+	// Get pagination parameters
+	page, pageSize := utils.GetPaginationParams(c)
+	offset := (page - 1) * pageSize
+
+	var bookings []models.Booking
+	var totalCount int64
+
+	// Start building the query
+	query := database.DB.Model(&models.Booking{})
+	countQuery := database.DB.Model(&models.Booking{})
+
+	// Apply filters if provided
+	statusFilter := c.Query("status")
+	if statusFilter != "" {
+		query = query.Where("status = ?", statusFilter)
+		countQuery = countQuery.Where("status = ?", statusFilter)
+	}
+
+	// Add date range filters if provided
+	startDate := c.Query("start_date")
+	if startDate != "" {
+		query = query.Where("start_time >= ?", startDate)
+		countQuery = countQuery.Where("start_time >= ?", startDate)
+	}
+
+	endDate := c.Query("end_date")
+	if endDate != "" {
+		query = query.Where("end_time <= ?", endDate)
+		countQuery = countQuery.Where("end_time <= ?", endDate)
+	}
+
+	// Check for car_id filter
+	carID := c.Query("car_id")
+	if carID != "" {
+		query = query.Where("car_id = ?", carID)
+		countQuery = countQuery.Where("car_id = ?", carID)
+	}
+
+	// Check for user_id filter
+	userIDFilter := c.Query("user_id")
+	if userIDFilter != "" {
+		query = query.Where("user_id = ?", userIDFilter)
+		countQuery = countQuery.Where("user_id = ?", userIDFilter)
+	}
+
+	// Get total count for pagination
+	if result := countQuery.Count(&totalCount); result.Error != nil {
+		return utils.ServerErrorResponse(c, "Failed to count bookings")
+	}
+
+	// Get paginated bookings with car and user data
+	if result := query.Preload("Car").Preload("User").
+		Limit(pageSize).Offset(offset).
+		Order("created_at DESC").
+		Find(&bookings); result.Error != nil {
+		return utils.ServerErrorResponse(c, "Failed to fetch bookings")
+	}
+
+	// Use the standard pagination helper
+	pagination := models.NewPagination(totalCount, page, pageSize)
+
+	return utils.PaginatedSuccessResponse(c, bookings, pagination, "All bookings fetched successfully")
 }
 
 func CancelBooking(c *fiber.Ctx) error {

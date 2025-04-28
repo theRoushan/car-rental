@@ -48,7 +48,7 @@ func Register(c *fiber.Ctx) error {
 
 	// Generate JWT token
 	cfg := c.Locals("config").(*config.Config)
-	token, err := middlewares.GenerateToken(user.ID.String(), cfg)
+	token, err := middlewares.GenerateToken(user.ID.String(), user.Role, cfg)
 	if err != nil {
 		return utils.ServerErrorResponse(c, "Failed to generate token")
 	}
@@ -84,7 +84,7 @@ func Login(c *fiber.Ctx) error {
 
 	// Generate JWT token
 	cfg := c.Locals("config").(*config.Config)
-	token, err := middlewares.GenerateToken(user.ID.String(), cfg)
+	token, err := middlewares.GenerateToken(user.ID.String(), user.Role, cfg)
 	if err != nil {
 		return utils.ServerErrorResponse(c, "Failed to generate token")
 	}

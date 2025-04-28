@@ -1,4 +1,4 @@
-import 'package:car_rental_admin/core/models/car.dart';
+import 'package:car_rental_admin/features/cars/models/car.dart';
 import 'package:equatable/equatable.dart';
 
 abstract class CarEvent extends Equatable {
@@ -9,11 +9,12 @@ abstract class CarEvent extends Equatable {
 class LoadCars extends CarEvent {
   final int page;
   final int limit;
+  final String? vehicleNumber;
 
-  LoadCars({this.page = 1, this.limit = 10});
+  LoadCars({this.page = 1, this.limit = 10, this.vehicleNumber});
 
   @override
-  List<Object?> get props => [page, limit];
+  List<Object?> get props => [page, limit, vehicleNumber];
 }
 
 class LoadMoreCars extends CarEvent {
@@ -109,4 +110,13 @@ class FilterCars extends CarEvent {
         minPrice,
         maxPrice,
       ];
+}
+
+class SearchByVehicleNumber extends CarEvent {
+  final String vehicleNumber;
+
+  SearchByVehicleNumber(this.vehicleNumber);
+
+  @override
+  List<Object?> get props => [vehicleNumber];
 }

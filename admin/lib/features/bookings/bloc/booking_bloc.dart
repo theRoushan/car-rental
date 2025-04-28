@@ -5,9 +5,12 @@ import 'booking_state.dart';
 
 class BookingBloc extends Bloc<BookingEvent, BookingState> {
   final BookingRepository _bookingRepository;
+  static const int _pageSize = 10;
 
   BookingBloc(this._bookingRepository) : super(const BookingInitial()) {
     on<LoadBookings>(_onLoadBookings);
+    on<RefreshBookings>(_onRefreshBookings);
+    on<LoadMoreBookings>(_onLoadMoreBookings);
     on<LoadBookingDetails>(_onLoadBookingDetails);
     on<LoadUserBookings>(_onLoadUserBookings);
     on<CreateBooking>(_onCreateBooking);
@@ -20,10 +23,61 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
   ) async {
     emit(const BookingLoading());
     try {
-      final bookings = await _bookingRepository.getBookings();
-      emit(BookingsLoaded(bookings));
+      final bookings = await _bookingRepository.getBookings(page: 1, limit: _pageSize);
+      final hasReachedMax = bookings.items.length < _pageSize;
+      emit(BookingsLoaded(
+        bookings: bookings.items,
+        hasReachedMax: hasReachedMax,
+        currentPage: 1,
+      ));
     } catch (e) {
       emit(BookingError(e.toString()));
+    }
+  }
+
+  Future<void> _onRefreshBookings(
+    RefreshBookings event,
+    Emitter<BookingState> emit,
+  ) async {
+    try {
+      final bookings = await _bookingRepository.getBookings(page: 1, limit: _pageSize);
+      final hasReachedMax = bookings.items.length < _pageSize;
+      emit(BookingsLoaded(
+        bookings: bookings.items,
+        hasReachedMax: hasReachedMax,
+        currentPage: 1,
+      ));
+    } catch (e) {
+      emit(BookingError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadMoreBookings(
+    LoadMoreBookings event,
+    Emitter<BookingState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is BookingsLoaded) {
+      if (currentState.hasReachedMax) return;
+      
+      emit(PaginationLoading(currentState.bookings));
+      
+      try {
+        final newBookings = await _bookingRepository.getBookings(
+          page: event.page,
+          limit: _pageSize,
+        );
+        
+        final hasReachedMax = newBookings.items.length < _pageSize;
+        
+        emit(currentState.copyWith(
+          bookings: [...currentState.bookings, ...newBookings.items],
+          hasReachedMax: hasReachedMax,
+          currentPage: event.page,
+        ));
+      } catch (e) {
+        emit(BookingError(e.toString()));
+      }
     }
   }
 

@@ -55,7 +55,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'email': event.email,
           'password': event.password,
         },
-        fromJson: (json) => json as Map<String, dynamic>,
+        fromJson: (json) => json,
       );
 
       if (response.success && response.data != null) {
@@ -90,7 +90,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'password': event.password,
           'role': 'admin',
         },
-        fromJson: (json) => json as Map<String, dynamic>,
+        fromJson: (json) => json,
       );
 
       if (response.success && response.data != null) {

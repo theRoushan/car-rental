@@ -13,11 +13,22 @@ class CarRepository {
   })  : _dio = dio,
         _baseUrl = baseUrl;
 
-  Future<PaginatedCarList> getCars({int page = 1, int limit = 10}) async {
+  Future<PaginatedList> getCars({
+    int page = 1, 
+    int limit = 10,
+    String? vehicleNumber,
+  }) async {
     try {
+      final queryParams = {
+        'page': page, 
+        'limit': limit,
+        if (vehicleNumber != null && vehicleNumber.isNotEmpty) 
+          'vehicle_number': vehicleNumber,
+      };
+      
       final response = await _dio.get(
         '$_baseUrl/api/cars',
-        queryParameters: {'page': page, 'limit': limit},
+        queryParameters: queryParams,
       );
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
@@ -31,7 +42,9 @@ class CarRepository {
         throw Exception('No data returned');
       }
 
-      return PaginatedCarList.fromJson(apiResponse.data!);
+      return PaginatedList.fromJson(apiResponse.data!, 
+        (item) => Car.fromJson(item),
+      );
     } catch (e) {
       throw Exception('Failed to fetch cars: ${e.toString()}');
     }

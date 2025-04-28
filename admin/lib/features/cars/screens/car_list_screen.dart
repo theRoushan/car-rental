@@ -6,6 +6,7 @@ import '../bloc/car_bloc.dart';
 import '../bloc/car_event.dart';
 import '../bloc/car_state.dart';
 import '../models/car.dart';
+import 'dart:async';
 
 class CarListScreen extends StatefulWidget {
   const CarListScreen({super.key});
@@ -16,35 +17,52 @@ class CarListScreen extends StatefulWidget {
 
 class _CarListScreenState extends State<CarListScreen> {
   final ScrollController _scrollController = ScrollController();
-  
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+
   @override
   void initState() {
     super.initState();
     // Load initial cars
     context.read<CarBloc>().add(LoadCars());
-    
+
     // Add scroll listener for pagination
     _scrollController.addListener(_onScroll);
   }
-  
+
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
-  
+
   void _onScroll() {
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
-    
+
     // If we're near the bottom (within 200 pixels), load more items
     if (maxScroll - currentScroll <= 200) {
       final carState = context.read<CarBloc>().state;
-      if (carState is CarsLoaded && carState.hasNextPage && !carState.isLoadingMore) {
+      if (carState is CarsLoaded &&
+          carState.hasNextPage &&
+          !carState.isLoadingMore) {
         context.read<CarBloc>().add(LoadMoreCars());
       }
     }
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (query.isEmpty) {
+        context.read<CarBloc>().add(LoadCars());
+      } else {
+        context.read<CarBloc>().add(SearchByVehicleNumber(query));
+      }
+    });
   }
 
   @override
@@ -53,39 +71,45 @@ class _CarListScreenState extends State<CarListScreen> {
       body: Column(
         children: [
           // Filter/Search Bar
- Padding(
-   padding: const EdgeInsets.all(10.0),
-   child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search by name, plate, or location',
-                        prefixIcon: const Icon(Icomoon.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
+          Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search by vehicle number',
+                      prefixIcon: const Icon(Icomoon.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
                       ),
-                      onChanged: (value) {
-                        // TODO: Implement search functionality
-                      },
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            )
+                          : null,
                     ),
+                    onChanged: _onSearchChanged,
                   ),
-                  TextButton(
-                    onPressed: () {
-                      // TODO: Navigate to add new car screen
-                    },
-                    child: const Icon(Icons.add),
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  width: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurpleAccent[100],
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                ],
-              ),
- ),
-         Container(
+                  height: 55,
+                  child: const Icon(Icons.add),),
+              ],
+            ),
+          ),
+          Container(
             height: 1,
             color: Colors.grey[400],
             width: double.infinity,
@@ -121,34 +145,105 @@ class _CarListScreenState extends State<CarListScreen> {
 
                 if (state is CarsLoaded) {
                   if (state.cars.isEmpty) {
-                    return const Center(child: Text('No cars available'));
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('No cars available'),
+                          if (state.searchQuery != null && state.searchQuery!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: TextButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  context.read<CarBloc>().add(LoadCars());
+                                },
+                                child: const Text('Clear search'),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
                   }
 
                   return RefreshIndicator(
                     onRefresh: () async {
-                      context.read<CarBloc>().add(LoadCars());
+                      if (state.searchQuery != null && state.searchQuery!.isNotEmpty) {
+                        context.read<CarBloc>().add(SearchByVehicleNumber(state.searchQuery!));
+                      } else {
+                        context.read<CarBloc>().add(LoadCars());
+                      }
                     },
                     child: Stack(
                       children: [
-                        ListView.builder(
-                          controller: _scrollController,
-                          itemCount: state.cars.length + (state.isLoadingMore || state.hasNextPage ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            // If we've reached the end and there's more to load or we're loading more
-                            if (index >= state.cars.length) {
-                              return state.isLoadingMore 
-                                ? const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16),
-                                    child: Center(child: CircularProgressIndicator()),
-                                  )
-                                : const SizedBox.shrink(); // Just to hold the space for pagination
-                            }
-                            
-                            final car = state.cars[index];
-                            return CarCard(car: car);
-                          },
+                        Column(
+                          children: [
+                            // Search filter indicator
+                            if (state.searchQuery != null && state.searchQuery!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0,
+                                    vertical: 6.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blueGrey.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Vehicle Number: ${state.searchQuery}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      InkWell(
+                                        onTap: () {
+                                          _searchController.clear();
+                                          context.read<CarBloc>().add(LoadCars());
+                                        },
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            Expanded(
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                itemCount: state.cars.length +
+                                    (state.isLoadingMore || state.hasNextPage
+                                        ? 1
+                                        : 0),
+                                itemBuilder: (context, index) {
+                                  // If we've reached the end and there's more to load or we're loading more
+                                  if (index >= state.cars.length) {
+                                    return state.isLoadingMore
+                                        ? const Padding(
+                                            padding:
+                                                EdgeInsets.symmetric(vertical: 16),
+                                            child: Center(
+                                                child: CircularProgressIndicator()),
+                                          )
+                                        : const SizedBox
+                                            .shrink(); // Just to hold the space for pagination
+                                  }
+
+                                  final car = state.cars[index];
+                                  return CarCard(car: car);
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        
+
                         // Loading overlay for pagination
                         if (state.isLoadingMore)
                           Positioned(
@@ -163,7 +258,6 @@ class _CarListScreenState extends State<CarListScreen> {
                               ),
                             ),
                           ),
-                        
                       ],
                     ),
                   );
@@ -251,42 +345,11 @@ class CarCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${car.transmission} • ${car.fuelType} • ${car.seatingCapacity} seater',
+                        '${car.transmission} • ${car.fuelType} • ${car.bodyType} • ${car.seatingCapacity} seater',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                     ],
                   ),
-                ),
-
-                // Status Badge and Actions
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (car.isAvailable) // Only show the badge if the car is available
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'Available',
-                          style: TextStyle(color: Colors.white, fontSize: 10),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        // TODO: Handle actions
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(value: 'View', child: Text('View')),
-                        const PopupMenuItem(value: 'Edit', child: Text('Edit')),
-                        const PopupMenuItem(value: 'Disable', child: Text('Disable')),
-                      ],
-                      child: const Icon(Icons.more_vert),
-                    ),
-                  ],
                 ),
               ],
             ),
