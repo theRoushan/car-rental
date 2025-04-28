@@ -1,5 +1,7 @@
+import 'package:car_rental_admin/core/iconmoon_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../bloc/car_bloc.dart';
 import '../bloc/car_event.dart';
 import '../bloc/car_state.dart';
@@ -51,29 +53,43 @@ class _CarListScreenState extends State<CarListScreen> {
       body: Column(
         children: [
           // Filter/Search Bar
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search by name, plate, or location',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+ Padding(
+   padding: const EdgeInsets.all(10.0),
+   child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search by name, plate, or location',
+                        prefixIcon: const Icon(Icomoon.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        // TODO: Implement search functionality
+                      },
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      // TODO: Navigate to add new car screen
+                    },
+                    child: const Icon(Icons.add),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
                       ),
                     ),
-                    onChanged: (value) {
-                      // TODO: Implement search functionality
-                    },
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+ ),
+         Container(
+            height: 1,
+            color: Colors.grey[400],
+            width: double.infinity,
           ),
-          const Divider(),
-
           // Car List (Card View)
           Expanded(
             child: BlocBuilder<CarBloc, CarState>(
@@ -108,43 +124,48 @@ class _CarListScreenState extends State<CarListScreen> {
                     return const Center(child: Text('No cars available'));
                   }
 
-                  return Stack(
-                    children: [
-                      ListView.builder(
-                        controller: _scrollController,
-                        itemCount: state.cars.length + (state.isLoadingMore || state.hasNextPage ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          // If we've reached the end and there's more to load or we're loading more
-                          if (index >= state.cars.length) {
-                            return state.isLoadingMore 
-                              ? const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                  child: Center(child: CircularProgressIndicator()),
-                                )
-                              : const SizedBox.shrink(); // Just to hold the space for pagination
-                          }
-                          
-                          final car = state.cars[index];
-                          return CarCard(car: car);
-                        },
-                      ),
-                      
-                      // Loading overlay for pagination
-                      if (state.isLoadingMore)
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          child: Container(
-                            height: 80,
-                            color: Colors.black.withOpacity(0.1),
-                            child: const Center(
-                              child: CircularProgressIndicator(),
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      context.read<CarBloc>().add(LoadCars());
+                    },
+                    child: Stack(
+                      children: [
+                        ListView.builder(
+                          controller: _scrollController,
+                          itemCount: state.cars.length + (state.isLoadingMore || state.hasNextPage ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            // If we've reached the end and there's more to load or we're loading more
+                            if (index >= state.cars.length) {
+                              return state.isLoadingMore 
+                                ? const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(child: CircularProgressIndicator()),
+                                  )
+                                : const SizedBox.shrink(); // Just to hold the space for pagination
+                            }
+                            
+                            final car = state.cars[index];
+                            return CarCard(car: car);
+                          },
+                        ),
+                        
+                        // Loading overlay for pagination
+                        if (state.isLoadingMore)
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 80,
+                              color: Colors.black.withOpacity(0.1),
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
                             ),
                           ),
-                        ),
-                      
-                    ],
+                        
+                      ],
+                    ),
                   );
                 }
 
@@ -154,12 +175,7 @@ class _CarListScreenState extends State<CarListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Navigate to add new car screen
-        },
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: null, // Remove the floating action button
     );
   }
 }
@@ -171,102 +187,112 @@ class CarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Thumbnail Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                car.images.isNotEmpty ? car.images[0] : '',
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
+    return Opacity(
+      opacity: car.isAvailable ? 1.0 : 0.5, // Grey out the card if unavailable
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                // Thumbnail Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    car.images.isNotEmpty ? car.images[0] : '',
                     width: 80,
                     height: 80,
-                    color: Colors.grey[300],
-                    child: const Icon(
-                      Icons.directions_car,
-                      size: 40,
-                      color: Colors.grey,
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-
-            // Car Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${car.make} ${car.model} ${car.year}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Plate: ${car.vehicleNumber}',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '\$${car.rentalPricePerDay}/day',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Location: City/Branch', // TODO: Replace with actual location
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-
-            // Status Badge and Actions
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: car.isAvailable ? Colors.green : Colors.red,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    car.isAvailable ? 'Available' : 'Disabled',
-                    style: const TextStyle(color: Colors.white),
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 80,
+                        height: 80,
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.directions_car,
+                          size: 40,
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
                   ),
                 ),
-                const SizedBox(height: 8),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    // TODO: Handle actions
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'View', child: Text('View')),
-                    const PopupMenuItem(value: 'Edit', child: Text('Edit')),
-                    const PopupMenuItem(value: 'Disable', child: Text('Disable')),
+                const SizedBox(width: 16),
+
+                // Car Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${car.make} ${car.model}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        car.vehicleNumber,
+                        style: TextStyle(
+                          fontFamily: GoogleFonts.barlow(
+                            fontWeight: FontWeight.w600,
+                          ).fontFamily,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '\$${car.rentalPricePerDay}/day',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${car.transmission} • ${car.fuelType} • ${car.seatingCapacity} seater',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Status Badge and Actions
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (car.isAvailable) // Only show the badge if the car is available
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Available',
+                          style: TextStyle(color: Colors.white, fontSize: 10),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        // TODO: Handle actions
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(value: 'View', child: Text('View')),
+                        const PopupMenuItem(value: 'Edit', child: Text('Edit')),
+                        const PopupMenuItem(value: 'Disable', child: Text('Disable')),
+                      ],
+                      child: const Icon(Icons.more_vert),
+                    ),
                   ],
-                  child: const Icon(Icons.more_vert),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const Divider(), // Divider between elements
+        ],
       ),
     );
   }

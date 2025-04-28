@@ -1,3 +1,4 @@
+import 'package:car_rental_admin/core/iconmoon_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../auth/bloc/auth_bloc.dart';
@@ -37,48 +38,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Car Rental Admin'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              context.read<AuthBloc>().add(LogoutRequested());
-            },
-          ),
-        ],
-      ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: const [
-          CarListScreen(),
-          BookingListScreen(),
-          OwnerListScreen(),
-          Center(child: Text('Settings')),
-        ],
+      // appBar: AppBar(
+      //   title: const Text('Car Rental Admin'),
+      //   actions: [
+      //     IconButton(
+      //       icon: const Icon(Icons.logout),
+      //       onPressed: () {
+      //         context.read<AuthBloc>().add(LogoutRequested());
+      //       },
+      //     ),
+      //   ],
+      // ),
+      body: SafeArea(
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: const [
+            CarListScreen(),
+            BookingListScreen(),
+            OwnerListScreen(),
+            Center(child: Text('Settings')),
+          ],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
+        indicatorColor: Colors.transparent,
         selectedIndex: _selectedIndex,
+        shadowColor: Colors.transparent,
         onDestinationSelected: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
+        labelTextStyle: WidgetStateProperty.fromMap(
+          {
+            WidgetState.selected:  const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+            WidgetState.any:   TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              color: Colors.grey[500],
+
+            ),
+          },
+        ),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.directions_car),
+            icon: Icon(Icomoon.carRear, size: 20),
             label: 'Cars',
           ),
           NavigationDestination(
-            icon: Icon(Icons.book),
+            icon: Icon(Icomoon.booking, size: 20),
             label: 'Bookings',
           ),
           NavigationDestination(
-            icon: Icon(Icons.people),
+            icon: Icon(Icomoon.holdingHandKey, size: 20),
             label: 'Owners',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icomoon.settings, size: 20),
             label: 'Settings',
           ),
         ],
